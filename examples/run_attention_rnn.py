@@ -42,14 +42,17 @@ def run_fnn():
     p["right_win"] = -1
     p["lr"] = 0.1
     p["n_h"] = 55
-    p["data_path"] = "../data/semeval_mic_train_and_test_with_extraction"
+    p["data_path"] = "../data/semeval_mic_train_and_test_with_key_words"
     p["minimum_sent_num"] = 0
-    p["prediction_results"] = "../result/brnn_results/bilstm_semeval_gold.correct"
+    p["prediction_results"] =\
+    "../result/attention_compare_results/attention_eval.semeval"
     p["minimum_frame"] = 0
     p["train_part"] = 0.7
     p["test_part"] = 0.3
     p["validation_part"] = 0.0
     p["norm_func"] = 'softmax'
+    p["show_key_words"] = True
+    p["key_words_tag"] = "_key_words_tag"
     on_validation = False
     training_detail = False
     # Get vocabulary and word vectors
@@ -70,7 +73,8 @@ def run_fnn():
     train_loader = DataLoader(
         data_path=p["data_path"], vocab=vocab, oov=p["oov"],
         left_win=p["left_win"], right_win=p["right_win"],
-        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
+        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"],
+        show_key_words=p["show_key_words"], key_words_tag=p["key_words_tag"]
     )
     train, test, validation = train_loader.get_data(
         p["train_part"], p["test_part"], p["validation_part"],
@@ -88,6 +92,8 @@ def run_fnn():
         "frame number(test data)",
         'epoch'
     ]
+    if p["show_key_words"]:
+        field_names.append("map_score")
     # Average statistics over all verbs
     scores_overall = np.zeros(len(field_names), dtype=FLOAT)
     verb_counter = 0
@@ -116,9 +122,7 @@ def run_fnn():
         )
 
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
-        if p["attention_birnn"]:
-            attention_matrix = rnn.attention_matrix
-
+        attention_matrix = rnn.attention_matrix
         precision, recall, f_score, _, _ = standard_score(
             y_true=test[verb][1], y_pred=y_pred
         )
@@ -129,6 +133,11 @@ def run_fnn():
             len(set(test[verb][1])),
             epoch
         ]
+        if p["show_key_words"]:
+            map_score = mean_average_precision(
+                y_trues_array=test[verb][3], y_scores_array=attention_matrix
+            )
+            scores.append(map_score)
         scores_overall += scores
         print("current verb:%s, scores are:" % verb)
         print(gen_print_info(field_names, scores))
@@ -142,7 +151,7 @@ def run_fnn():
         for i in range(0, len(test[verb][1])):
             is_true = True if test[verb][1][i] == y_pred[i] else False
             out_line = "%s\tpredict:%s\ttrue:%s\t" % (is_true, y_pred[i], test[verb][1][i])
-            for attention, word in zip(attention_matrix[i][0], sents[i]):
+            for attention, word in zip(attention_matrix[i], sents[i]):
                 out_line += "%s(%.3f) " % (word, attention)
             print(out_line, file=fh_pr)
 

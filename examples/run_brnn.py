@@ -115,8 +115,6 @@ def run_fnn():
         )
 
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
-        if p["attention_birnn"]:
-            attention_matrix = rnn.attention_matrix
 
         precision, recall, f_score, _, _ = standard_score(
             y_true=test[verb][1], y_pred=y_pred

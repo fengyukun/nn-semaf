@@ -2,7 +2,7 @@
 """
 Authors: fengyukun
 Date:   2016/03/22
-Brief:  data loader
+Brief:  data loader (TO Be Recfatored)
 The input data should have following format:
     1. Provide a directory where data files lie
     2. All files are named by verb itself
@@ -34,17 +34,22 @@ class DataLoader(object):
     Data loader class
     """
     def __init__(self, data_path, vocab, oov, left_win=5, right_win=5,
-                 use_verb=False, lower=False, use_padding=True):
+                 use_verb=False, lower=False, use_padding=True,
+                 show_key_words=False, key_words_tag="_key_words_tag"):
         """
-        vocab: dict, word to word index. The vocab must have oov and keep oov_index=vocab[oov]
+        vocab: dict, word to word index. The vocab must have oov and keep
+        oov_index=vocab[oov]
         oov: string, out ov vocabulary
                 Used when word is not in vocabulary and padding where necessary
         left_win: int, left windows length, -1 will include all left words
         right_win: int, right windows length, -1 will include all right words
         use_verb: bool, whether use verb
         lower: bool, whether lowercase the sentences
+        show_key_words: bool, whether the text show key words
+        key_words_tag: str, the keys words with attention is tagged with it.
         """
 
+        self.show_key_words = show_key_words
         # verb to data set x and data answer y
         self.verb2x = {}
         file_names = os.listdir(data_path)
@@ -65,6 +70,17 @@ class DataLoader(object):
                 frame_id = items[0].strip()
                 # sents[0](left sentences), sents[1](verb), sents[2](right sentence)
                 sents = [nltk.word_tokenize(items[i]) for i in range(1, len(items))]
+                # 1 for true and 0 for false
+                if show_key_words:
+                    key_words_list = []
+                    for i in range(0, len(sents)):
+                        for j in range(0, len(sents[i])):
+                            key_pos = sents[i][j].find(key_words_tag)
+                            if key_pos >= 0:
+                                key_words_list.append(1)
+                                sents[i][j] = sents[i][j][0:key_pos]
+                            else:
+                                key_words_list.append(0)
                 sents_indexs = sents2indexs(sents, vocab, oov)
                 left_sent = sent_indexs_trunc(sents_indexs[0], left_win,
                                               "left", vocab[oov],
@@ -80,12 +96,20 @@ class DataLoader(object):
                     input_sent = left_sent + right_sent
                 if file_name not in self.verb2x:
                     self.verb2x[file_name] = []
-                self.verb2x[file_name].append((input_sent, frame_id, verb_index))
+                if show_key_words:
+                    self.verb2x[file_name].append(
+                        (input_sent, frame_id, verb_index, key_words_list)
+                    )
+                else:
+                    self.verb2x[file_name].append(
+                        (input_sent, frame_id, verb_index)
+                    )
+
 
             fh.close()
 
     def get_data(self, train_part, test_part, validation_part,\
-            sent_num_threshold=0, frame_threshold=0, verb_index=False):
+                 sent_num_threshold=0, frame_threshold=0, verb_index=False):
         """
         Divide these data into train data, test data and validation data
 
@@ -146,6 +170,9 @@ class DataLoader(object):
                 if verb_index:
                     data_vindex = [row[2] for row in items[i]]
                     datas[i][verb].append(np.array(data_vindex))
+                if self.show_key_words:
+                    key_words_list = [row[3] for row in items[i]]
+                    datas[i][verb].append(np.array(key_words_list))
 
         return [train, test, validation]
 
@@ -153,17 +180,18 @@ class DataLoader(object):
 def test_data_loader():
     p = {
         "word2vec_path": "../data/sample_word2vec.txt",
-        # "word2vec_path": "../data/data2vec.txt.chn",
-        # "word2vec_path": "../../word2vec/vector_model/glove.twitter.27B.25d.txt",
         "vec_binary": False,
-        "data_path": "../data/sample/",
+        #  "data_path": "../data/sample/",
+        "data_path": "./tmp_data/",
         "oov": "O_O_V",
         "left_win": -1,
         "right_win": -1,
         "use_verb": True,
         "lower": True,
         "use_padding": False,
-        "verb_index": True
+        "verb_index": True,
+        "show_key_words": True,
+        "key_words_tag": "_key_words_tag"
     }
     # Generate vocab
     vec_model = gensim.models.Word2Vec.load_word2vec_format(
@@ -184,25 +212,35 @@ def test_data_loader():
         right_win=p["right_win"],
         use_verb=p["use_verb"],
         lower=p["lower"],
-        use_padding=p["use_padding"]
+        use_padding=p["use_padding"], 
+        show_key_words=p["show_key_words"],
+        key_words_tag=p["key_words_tag"]
     )
     train, test, validation = data_loader.get_data(
-        0.1, 0.1, 0.1, verb_index=p["verb_index"]
+        1, 0., 0., verb_index=p["verb_index"]
     )
     for verb in train.keys():
         print("verb:%s" % verb)
         print("training data:%d" % len(train[verb][1]))
         sents = indexs2sents(train[verb][0], index2word_vocab)
-        for sent, frame, vindex in zip(sents, train[verb][1], train[verb][2]):
-            print("%s:\t%s\t%s" % (frame, sent, vindex))
-        print("\ntesting data:%d" % len(test[verb][1]))
-        sents = indexs2sents(test[verb][0], index2word_vocab)
-        for sent, frame, vindex in zip(sents, test[verb][1], test[verb][2]):
-            print("%s:\t%s\t%s" % (frame, sent, vindex))
-        print("\nvalidation data:%d" % len(validation[verb][1]))
-        sents = indexs2sents(validation[verb][0], index2word_vocab)
-        for sent, frame, vindex in zip(sents, validation[verb][1], validation[verb][2]):
-            print("%s:\t%s\t%s" % (frame, sent, vindex))
+        for i in range(0, len(sents)):
+            sent = sents[i]
+            frame = train[verb][1][i]
+            vindex = train[verb][2][i]
+            if p["show_key_words"]:
+                key_words_list = train[verb][3][i]
+                print("%s:\t%s\t%s\nkey_word_list:%s" % (frame, sent, vindex,
+                      key_words_list))
+            else:
+                print("%s:\t%s\t%s" % (frame, sent, vindex))
+        #  print("\ntesting data:%d" % len(test[verb][1]))
+        #  sents = indexs2sents(test[verb][0], index2word_vocab)
+        #  for sent, frame, vindex in zip(sents, test[verb][1], test[verb][2]):
+            #  print("%s:\t%s\t%s" % (frame, sent, vindex))
+        #  print("\nvalidation data:%d" % len(validation[verb][1]))
+        #  sents = indexs2sents(validation[verb][0], index2word_vocab)
+        #  for sent, frame, vindex in zip(sents, validation[verb][1], validation[verb][2]):
+            #  print("%s:\t%s\t%s" % (frame, sent, vindex))
 
 
 if __name__ == "__main__":

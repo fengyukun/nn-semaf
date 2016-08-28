@@ -525,17 +525,17 @@ def convert_semeval_with_extraction(detail=True):
             fh.close()
             fh_out.close()
 
-def convert_semeval_with_attention(detail=True):
+def convert_semeval_with_key_words_showing(detail=True):
     """
-    Convert semeval data with attention
+    Convert semeval data with key words showing
     """
 
     # Parameters
     p = {
         "data_sets": ["../data/semeval2015_task15/train/Microcheck/", "../data/semeval2015_task15/test/Microcheck/"],
-        "output_dir": "../data/semeval_mic_train_and_test_with_attention",
+        "output_dir": "../data/semeval_mic_train_and_test_with_key_words",
         "relations": ["subj", "obj", "iobj", "advprep", "acomp", "scomp"],
-        "attention_tag": "_ATTENTION_TAG"
+        "key_words_tag": "_key_words_tag"
     }
     #  if detail:
         #  print_params(p)
@@ -574,10 +574,10 @@ def convert_semeval_with_attention(detail=True):
                 tokens = line.split("\t")
                 if len(tokens) == 4:
                     if tokens[2] == "v":
-                        sent += "\t%s%s\t" % (tokens[1], p["attention_tag"])
+                        sent += "\t%s%s\t" % (tokens[1], p["key_words_tag"])
                         cluster_id = verb_id2cluster_id[tokens[0]]
                     else:
-                        sent += tokens[1] + p["attention_tag"] + " "
+                        sent += tokens[1] + p["key_words_tag"] + " "
                 else:
                     sent += tokens[1] + " "
 
@@ -628,7 +628,7 @@ def convert_pdev(detail=True):
 if __name__ == "__main__":
     # convert_semeval_without_extraction()
     #  convert_semeval_with_extraction()
-    convert_semeval_with_attention()
+    convert_semeval_with_key_words_showing()
     # convert_pdev()
     # convert_chn_text()
     # convert_propbank()

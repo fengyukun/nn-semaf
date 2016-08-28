@@ -111,14 +111,20 @@ class FuncNormLayer(NormlizationLayer):
         """
         Compute forward pass
         x: numpy.ndarray
-            x is the input data with the shape (num_instances, num_inputs)
+            x is the input data with the shape (num_instances,
+            num_inputs) or (num_inputs, )
 
         output
         --------
         forward_out: numpy.ndarray
-            Output with the shape (num_instances, num_inputs)
+            Output with the shape (num_instances, num_inputs) or (num_inputs, )
         """
 
+        # Normalize 1d array to 2d array
+        self.is_1d = False
+        if len(x.shape) == 1:
+            self.is_1d = True
+            x = x.reshape((1, x.shape[0]))
         if self.act_func == 'softmax':
             # Numerically-stable softmax input
             stable_input = (x - np.max(x, axis=1) .reshape(x.shape[0], 1))
@@ -129,10 +135,11 @@ class FuncNormLayer(NormlizationLayer):
             logging.error("Unknown act_func:%s" % (act_func, ))
             raise Exception
         forward_out = NormlizationLayer.forward(self, stable_input)
+        if self.is_1d:
+            forward_out = forward_out.reshape((forward_out.shape[1], ))
 
         # Keep track of stable input
         self.stable_input = stable_input
-
         return forward_out
 
     def backprop(self, go):
@@ -150,6 +157,8 @@ class FuncNormLayer(NormlizationLayer):
             Gradients on net the input of current layer.
         """
 
+        if self.is_1d:
+            go = go.reshape((1, go.shape[0]))
         if go.shape[1] != self.n_unit:
             logging.error("shape doesn't match, go shape:%s, unit number:%s"
                           % (go, self.n_unit))
@@ -165,6 +174,8 @@ class FuncNormLayer(NormlizationLayer):
         else:
             logging.error("Unknown act_func:%s" % (act_func, ))
             raise Exception
+        if self.is_1d:
+            gnet = gnet.reshape((gnet.shape[1],))
         return gnet
 
 
@@ -620,9 +631,9 @@ class AttentionLayer(Layer):
         for i in range(0, len(x)):
             row_len = len(x[i])
             # Numerical value before normalization
-            before_norm_val = np.zeros(shape=(1, row_len))
+            before_norm_val = np.zeros(shape=(row_len,))
             for j in range(0, row_len):
-                before_norm_val[0][j] = (
+                before_norm_val[j] = (
                     x[i][j].dot(global_info[i])
                 )
             self.norm_layers.append(
@@ -632,7 +643,7 @@ class AttentionLayer(Layer):
             self.after_norm_vals.append(after_norm_val)
             # Compute weighted sum
             for j in range(0, row_len):
-                weighted_sums[i] += (x[i][j] * after_norm_val[0][j])
+                weighted_sums[i] += (x[i][j] * after_norm_val[j])
 
         self.x = x
         self.global_info = global_info
@@ -656,8 +667,8 @@ class AttentionLayer(Layer):
 
             # Compute part of graidents on x and before_norm_val
             for j in range(0, row_len):
-                gx[i][j] = (go[i] * self.after_norm_vals[i][0][j])
-                gbefore_norm_vals[i][0][j] = (
+                gx[i][j] = (go[i] * self.after_norm_vals[i][j])
+                gbefore_norm_vals[i][j] = (
                     go[i].dot(self.x[i][j])
                 )
 
@@ -667,8 +678,8 @@ class AttentionLayer(Layer):
 
             # Compute another part gradients on x and global_info
             for j in range(0, row_len):
-                gx[i][j] += (self.global_info[i] * gbefore_norm_vals[i][0][j])
-                gglobal_info[i] += self.x[i][j] * gbefore_norm_vals[i][0][j]
+                gx[i][j] += (self.global_info[i] * gbefore_norm_vals[i][j])
+                gglobal_info[i] += self.x[i][j] * gbefore_norm_vals[i][j]
 
         return (gx, gglobal_info)
 
