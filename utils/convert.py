@@ -525,6 +525,65 @@ def convert_semeval_with_extraction(detail=True):
             fh.close()
             fh_out.close()
 
+def convert_semeval_with_attention(detail=True):
+    """
+    Convert semeval data with attention
+    """
+
+    # Parameters
+    p = {
+        "data_sets": ["../data/semeval2015_task15/train/Microcheck/", "../data/semeval2015_task15/test/Microcheck/"],
+        "output_dir": "../data/semeval_mic_train_and_test_with_attention",
+        "relations": ["subj", "obj", "iobj", "advprep", "acomp", "scomp"],
+        "attention_tag": "_ATTENTION_TAG"
+    }
+    #  if detail:
+        #  print_params(p)
+    os.system("rm -rf %s" % p["output_dir"])
+    os.system("mkdir -p %s" % p["output_dir"])
+    for data_set_path in p["data_sets"]:
+        files = os.listdir("%s/task1/" % data_set_path)
+        for file_name in files:
+            if detail:
+                print("to process %s" % file_name)
+            verb_name, ext = os.path.splitext(file_name)
+            file_path = "%s/task1/%s" % (data_set_path, file_name)
+            # Read cluster
+            file_cluster_path = "%s/task2/%s.clust" % (data_set_path, verb_name)
+            fh = open(file_cluster_path, "r")
+            verb_id2cluster_id = {}
+            for line in fh:
+                line = line.strip()
+                if line == "":
+                    continue
+                verb_id, cluster_id = line.split("\t")
+                verb_id2cluster_id[verb_id] = cluster_id
+            fh.close()
+
+            out_file_path = "%s/%s" % (p["output_dir"], verb_name)
+            fh_out = open(out_file_path, "w")
+            fh = open(file_path, "r", encoding = "ISO-8859-1")
+            sent = ""
+            cluster_id = -1
+            for line in fh:
+                line = line.strip()
+                if line == "":
+                    fh_out.write("%s\t%s\n" % (cluster_id, sent))
+                    sent = ""
+                    continue
+                tokens = line.split("\t")
+                if len(tokens) == 4:
+                    if tokens[2] == "v":
+                        sent += "\t%s%s\t" % (tokens[1], p["attention_tag"])
+                        cluster_id = verb_id2cluster_id[tokens[0]]
+                    else:
+                        sent += tokens[1] + p["attention_tag"] + " "
+                else:
+                    sent += tokens[1] + " "
+
+            fh.close()
+            fh_out.close()
+
 def convert_pdev(detail=True):
     """
     Convert pdev data
@@ -568,7 +627,8 @@ def convert_pdev(detail=True):
 
 if __name__ == "__main__":
     # convert_semeval_without_extraction()
-    convert_semeval_with_extraction()
+    #  convert_semeval_with_extraction()
+    convert_semeval_with_attention()
     # convert_pdev()
     # convert_chn_text()
     # convert_propbank()
