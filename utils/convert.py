@@ -12,6 +12,7 @@ from nltk.corpus import ptb
 from nltk.corpus import propbank
 from nltk.stem import WordNetLemmatizer
 import codecs
+import string
 from tools import*
 import logging
 logging.basicConfig(
@@ -51,9 +52,11 @@ def convert_propbank(detail=True):
     propbank
     """
 
-    out_dir = "../data/wsj_propbank/"
+    out_dir = "../data/show_key_words_wsj_propbank/"
     os.system("rm -rf %s" % (out_dir, ))
     os.system("mkdir -p %s" % (out_dir, ))
+    show_key_words = True
+    key_word_tag = "keywordtag"
 
     pb_instances = propbank.instances()
     # Count at first
@@ -86,6 +89,32 @@ def convert_propbank(detail=True):
             fileid = inst.fileid
             sent_num = inst.sentnum
             verb_pos = inst.wordnum
+            arguments = inst.arguments
+            argument_word_pos = []
+            for argloc, argid in arguments:
+                # pos is something like "22:1,24:0,25:1*27:0"
+                pos = str(argloc)
+                # After relacing pos is something like "22:1 24:0 25:1 27:0"
+                pos = pos.replace(",", " ").replace("*", " ")
+                # Single item, e.g., 22:1
+                if pos.find(" ") < 0:
+                    items = [pos]
+                else:
+                    items = pos.split(" ")
+                # Multiple items
+                for item in items:
+                    wordnum, height = item.split(":")
+                    wordnum = int(wordnum)
+                    height = int(height)
+                    pos_list = [
+                        x for x in range(wordnum, wordnum + height + 1)
+                    ]
+                    argument_word_pos.extend(pos_list)
+            # Add verb pos. Verb itself is the argument
+            argument_word_pos.append(verb_pos)
+            # Remove duplicate pos
+            argument_word_pos = list(set(argument_word_pos))
+
             verb_lemma, frame = inst.roleset.split(".")
             section = [x for x in fileid if x.isdigit()][0:2]
             section = "".join(section)
@@ -94,6 +123,19 @@ def convert_propbank(detail=True):
             tagged_sent = ptb.tagged_sents(fileid_for_ptb)[sent_num]
             # Change tagged_sent from [tuples] to [list]
             tagged_sent = [[x[0], x[1]]for x in tagged_sent]
+
+            # Show key words
+            if show_key_words:
+                for word_pos in range(0, len(tagged_sent)):
+                    if word_pos not in argument_word_pos:
+                        continue
+                    word = tagged_sent[word_pos][0]
+                    if (word.find("*") >=0 
+                        or word.lower() in ["the", "a", "an"] 
+                        or word in string.punctuation or word == "``"):
+                        continue
+                    tagged_sent[word_pos][0] += key_word_tag
+
             verb_bak = tagged_sent[verb_pos][0]
             verb_identifier = "verb_identifier_xxxxx"
             tagged_sent[verb_pos][0] = verb_identifier
@@ -163,9 +205,40 @@ def load_semlink(detail=True):
                 framenet_frame = items[6]
                 pb_grouping = items[7]
                 si_grouping = items[8]
+
+                # Find arguments of target verb
+                arguments = items[10:]
+                # arguments, e.g., 0:1-ARG0=Agent 3:0-rel 6:2-ARG1=Topic
+                argument_list = []
+                for argument in arguments:
+                    pos_labels = argument.split("-");
+                    pos = pos_labels[0]
+                    label = pos_labels[1]
+                    if label == "rel":
+                        continue
+                    pos = pos.replace(",", " ").replace("*", " ")
+                    pos = pos.replace(";", " ")
+                    # Single item, e.g., 22:1
+                    if pos.find(" ") < 0:
+                        items = [pos]
+                    else:
+                        items = pos.split(" ")
+                    # Multiple items
+                    for item in items:
+                        wordnum, height = item.split(":")
+                        wordnum = int(wordnum)
+                        height = int(height)
+                        pos_list = [
+                            x for x in range(wordnum, wordnum + height + 1)
+                        ]
+                        argument_list.extend(pos_list)
+                argument_list.append(int(verb_pos))
+                # Remove duplicate
+                argument_list = list(set(argument_list))
+
                 sl_wsj_labels[doc].append([sent_id, verb_pos, verb, verbnet_class,
                                           framenet_frame, pb_grouping,
-                                          si_grouping])
+                                          si_grouping, argument_list])
                 sentid_labelidx_map[doc]["%s_%s" % (sent_id, verb)] = (
                     len(sl_wsj_labels[doc]) - 1
                 )
@@ -185,13 +258,16 @@ def convert_semlink_wsj2(detail=True):
     sl_wsj_labels, sentid_labelidx_map = load_semlink()
     sl_counters = summary_semlink_wsj(sl_wsj_labels, is_print=False)
 
-    out_dirs = ["../data/wsj_framnet/", "../data/wsj_verbnet/",
+    show_key_words = True
+    key_word_tag = "keywordtag"
+
+    out_dirs = ["../data/show_key_words_wsj_framnet/", "../data/wsj_verbnet/",
                "../data/wsj_sense"]
     sents_thresholds = [300, 300, 300]
     out_files = ["wsj.framenet", "wsj.verbnet", "wsj.sense"]
     frame_indexs = [4, 3, 6]
     corpus_names = ["framenet_frame", "verbnet_class", "si_grouping"]
-    excludes = []
+    excludes = [1, 2]
     for t in range(0, len(out_dirs)):
         if t in excludes:
             continue
@@ -243,6 +319,20 @@ def convert_semlink_wsj2(detail=True):
             tagged_sent = ptb.tagged_sents(fileid_for_ptb)[sent_num]
             # Change tagged_sent from [tuples] to [list]
             tagged_sent = [[x[0], x[1]]for x in tagged_sent]
+
+            # Show key words
+            if show_key_words:
+                argument_list = sl_taginfo[7]
+                for word_pos in range(0, len(tagged_sent)):
+                    if word_pos not in argument_list:
+                        continue
+                    word = tagged_sent[word_pos][0]
+                    if (word.find("*") >=0 
+                        or word.lower() in ["the", "a", "an"] 
+                        or word in string.punctuation or word == "``"):
+                        continue
+                    tagged_sent[word_pos][0] += key_word_tag
+
             verb_bak = tagged_sent[verb_pos][0]
             verb_identifier = "verb_identifier_xxxxx"
             tagged_sent[verb_pos][0] = verb_identifier
@@ -628,10 +718,10 @@ def convert_pdev(detail=True):
 if __name__ == "__main__":
     # convert_semeval_without_extraction()
     #  convert_semeval_with_extraction()
-    convert_semeval_with_key_words_showing()
+    #  convert_semeval_with_key_words_showing()
     # convert_pdev()
     # convert_chn_text()
-    # convert_propbank()
-    # convert_semlink_wsj2()
+    #  convert_propbank()
+    convert_semlink_wsj2()
     #  merge_split_data()
 
