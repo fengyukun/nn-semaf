@@ -194,6 +194,21 @@ def get_vocab_and_vectors(word2vec_path, norm_only, oov,\
     ).astype(dtype=dtype, copy=False)
     return [vocab, invocab, word2vec]
 
+def build_vocab(corpus_dir, random_wordvec=False, dimension=300):
+    """Build vocabulary from given corpus
+
+    :corpus_dir: The directory of the given corpus. Multiple files will be
+    count in corpus_dir.
+    :random_wordvec: Whether generate random word vector
+    :dimension: If random_wordvec is true, dimension indicates the dimension of
+    the word vector.
+    :returns: [vocab, invocab, word2vec(if random_wordvec is true)]
+        vocab: a dict, key is word id and the value is word iteself
+        invocab: a dict, key is word and the value is word id
+        word2vec: numpy.ndarray, 2d, row index is the word id
+
+    """
+    pass
 
 def basic_test():
     sents = [["I", "have ", "done"], ["apple", "and", "food"]]
