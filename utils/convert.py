@@ -20,6 +20,131 @@ logging.basicConfig(
     format=" [%(levelname)s]%(filename)s:%(lineno)s[function:%(funcName)s] %(message)s"
 )
 
+def convert_chn_propbank(detail=True):
+    """
+    Convert Chinese propbank
+    """
+    chn_propbank_file = "../../../nltk_data/cpb2/data/verbs.txt.utf8"
+    show_key_words = True
+    key_word_tag = "keywordtag"
+
+    out_dir = "../data/show_key_words_chn_propbank/"
+    os.system("rm -rf %s" % out_dir)
+    os.system("mkdir -p %s" % out_dir)
+
+    chn_punctuation = "》（）&%￥#@！{}【】，。；：、『「．"
+    is_remove_punct = True
+
+    ################################
+    #  Load Chinese propbank file  #
+    ################################
+
+    # Verb to items (one item is real tagging information on Chinese treebank)
+    verb_to_items = {}
+    # Verb to its frames
+    verb_to_frames = {}
+    
+    fh = open(chn_propbank_file)
+    for instance in fh:
+        instance = instance.strip()
+        # Empty line
+        if instance == "":
+            continue
+        items = instance.split()
+        fileid = items[0]
+        sent_id = items[1]
+        verb_id = items[2]
+        roleset = items[4]
+        verb, frame_id = roleset.split(".")
+        if verb not in verb_to_frames:
+            verb_to_frames[verb] = []
+        verb_to_frames[verb].append(frame_id)
+
+        ###################################
+        #  Find arguments of target verb  #
+        ###################################
+        # arguments, e.g., 0:1-ARG0=Agent 3:0-rel 6:2-ARG1=Topic
+        arguments = items[6:]
+        argument_list = []
+        for argument in arguments:
+            # position and tag label
+            pos_labels = argument.split("-");
+            pos = pos_labels[0]
+            label = pos_labels[1]
+            if label == "rel":
+                continue
+            pos = pos.replace(",", " ").replace("*", " ")
+            # Single item, e.g., 22:1
+            if pos.find(" ") < 0:
+                items = [pos]
+            else:
+                items = pos.split(" ")
+            # Multiple items
+            for item in items:
+                wordnum, height = item.split(":")
+                wordnum = int(wordnum)
+                height = int(height)
+                pos_list = [
+                    x for x in range(wordnum, wordnum + height + 1)
+                ]
+                argument_list.extend(pos_list)
+        argument_list.append(int(verb_id))
+        # Remove duplicate
+        argument_list = list(set(argument_list))
+
+        if verb not in verb_to_items:
+            verb_to_items[verb] = []
+        verb_to_items[verb].append(
+            [fileid, sent_id, verb_id, frame_id, argument_list]
+        )
+    fh.close()
+
+    ###############################################################
+    #  Genrate data file from propbank file and Chinese treebank  #
+    ###############################################################
+    for verb, items in verb_to_items.items():
+        # Skip those verbs which only have one frame in all instances
+        if len(set(verb_to_frames[verb])) == 1:
+            continue
+        fh_out = open("%s/%s" % (out_dir, verb), "w")
+        for item in items:
+            fileid = item[0]
+            sent_id = int(item[1])
+            verb_id = int(item[2])
+            frame_id = item[3]
+            argument_list = item[4]
+
+            fileid_for_ptb = "bracketed/%s" % fileid
+            tagged_sent = ptb.tagged_sents(fileid_for_ptb)[sent_id]
+            # Change tagged_sent from [tuples] to [list]
+            tagged_sent = [[x[0], x[1]]for x in tagged_sent]
+
+            # Show key words
+            if show_key_words:
+                for word_pos in range(0, len(tagged_sent)):
+                    if word_pos not in argument_list:
+                        continue
+                    word = tagged_sent[word_pos][0]
+                    if word.find("*") >=0 or word in chn_punctuation:
+                        continue
+                    tagged_sent[word_pos][0] += key_word_tag
+            verb_bak = tagged_sent[verb_id][0]
+            verb_identifier = "verb_identifier_xxxxx"
+            tagged_sent[verb_id][0] = verb_identifier
+            sent = []
+            for (token, tag)in tagged_sent:
+                if tag != '-NONE-':
+                    if is_remove_punct and token in chn_punctuation:
+                        continue
+                    sent.append(token)
+            sent = " ".join(sent)
+            left_sent, right_sent = sent.split(verb_identifier)
+            out_line = "%s\t%s\t%s\t%s" % (frame_id, left_sent, verb_bak,
+                                           right_sent)
+            print(out_line, file=fh_out)
+
+        fh_out.close()  
+
 
 def merge_split_data(detail=True):
     """
@@ -130,8 +255,8 @@ def convert_propbank(detail=True):
                     if word_pos not in argument_word_pos:
                         continue
                     word = tagged_sent[word_pos][0]
-                    if (word.find("*") >=0 
-                        or word.lower() in ["the", "a", "an"] 
+                    if (word.find("*") >=0
+                        or word.lower() in ["the", "a", "an"]
                         or word in string.punctuation or word == "``"):
                         continue
                     tagged_sent[word_pos][0] += key_word_tag
@@ -261,13 +386,14 @@ def convert_semlink_wsj2(detail=True):
     show_key_words = True
     key_word_tag = "keywordtag"
 
-    out_dirs = ["../data/show_key_words_wsj_framnet/", "../data/wsj_verbnet/",
-               "../data/wsj_sense"]
+    out_dirs = ["../data/show_key_words_wsj_framnet/",
+                "../data/show_key_words_wsj_verbnet/",
+                "../data/show_key_words_wsj_sense"]
     sents_thresholds = [300, 300, 300]
     out_files = ["wsj.framenet", "wsj.verbnet", "wsj.sense"]
     frame_indexs = [4, 3, 6]
     corpus_names = ["framenet_frame", "verbnet_class", "si_grouping"]
-    excludes = [1, 2]
+    excludes = [0]
     for t in range(0, len(out_dirs)):
         if t in excludes:
             continue
@@ -327,8 +453,8 @@ def convert_semlink_wsj2(detail=True):
                     if word_pos not in argument_list:
                         continue
                     word = tagged_sent[word_pos][0]
-                    if (word.find("*") >=0 
-                        or word.lower() in ["the", "a", "an"] 
+                    if (word.find("*") >=0
+                        or word.lower() in ["the", "a", "an"]
                         or word in string.punctuation or word == "``"):
                         continue
                     tagged_sent[word_pos][0] += key_word_tag
@@ -722,6 +848,7 @@ if __name__ == "__main__":
     # convert_pdev()
     # convert_chn_text()
     #  convert_propbank()
-    convert_semlink_wsj2()
+    #  convert_semlink_wsj2()
     #  merge_split_data()
+    convert_chn_propbank()
 
