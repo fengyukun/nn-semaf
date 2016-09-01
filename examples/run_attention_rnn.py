@@ -19,6 +19,8 @@ from collections import OrderedDict
 from parameter_setting import*
 
 
+
+
 def gen_print_info(field_names, values):
     """
     Generate print infomation
@@ -37,24 +39,55 @@ def gen_print_info(field_names, values):
 
 
 def run_fnn():
-    p = p_bilstm
-    p["left_win"] = -1 
-    p["right_win"] = -1
-    p["lr"] = 0.1
-    p["n_h"] = 55
-    p["data_path"] = "../data/semeval_mic_train_and_test_with_key_words"
-    p["minimum_sent_num"] = 0
-    p["prediction_results"] =\
-    "../result/attention_compare_results/attention_eval.semeval"
-    p["minimum_frame"] = 0
-    p["train_part"] = 0.7
-    p["test_part"] = 0.3
-    p["validation_part"] = 0.0
-    p["norm_func"] = 'softmax'
-    p["show_key_words"] = True
-    p["key_words_tag"] = "_key_words_tag"
-    on_validation = False
-    training_detail = False
+    p = OrderedDict([
+        ("\nParameters for word vectors", ""),
+        #  ("word2vec_path", "../data/sample_word2vec.txt"),
+        ("word2vec_path", "../../word2vec/vector_model/glove.6B.300d.txt"),
+        ("norm_vec", False),
+        ("oov", "O_O_V"),
+        ("\nParameters for loading data", ""),
+        #  ("data_path", "../data/sample"),
+        ("data_path", "../data/show_key_words_wsj_propbank"),
+        ("left_win", -1),
+        ("right_win", -1),
+        ("use_verb", True),
+        ("lower", True),
+        ("use_padding", False),
+        ("verb_index", True),
+        # Validation part and train_part are from train_data_path
+        ("train_part", 0.7),
+        ("test_part", 0.2),
+        ("validation_part", 0.1),
+        # Minimum number of sentences of training data
+        ("minimum_sent_num", 70), # ATTENTION TO THIS
+        # Minimum frame of verb of training data
+        ("minimum_frame", 2), # ATTENTION TO THIS
+        ("\nParameters for rnn model", ""),
+        ("n_h", 35), # ATTENTION TO THIS
+        ("up_wordvec", False),
+        ("use_bias", True),
+        ("act_func", "tanh"),
+        ("use_lstm", True),
+        ("max_epochs", 100),
+        ("minibatch", 5),
+        ("lr", 0.1),
+        ("norm_func",'softmax'),
+        ("random_vectors", False),
+        ("show_key_words",True),
+        ("key_words_tag", "keywordtag"),
+        ("\nOther parameters", ""),
+        ("on_validation", True), # ATTENTION TO THIS
+        ("training_detail", False), # ATTENTION TO THIS
+        ("prediction_results", "../result/attention_results")
+    ])
+    result_file = "n_h%s_lr%s_%s.valid%s" % (p["n_h"], p["lr"],
+                                os.path.basename(p["data_path"]),
+                                p["on_validation"])
+
+    if not os.path.isdir(p["prediction_results"]):
+        os.system("mkdir -p %s" % p["prediction_results"])
+    p["prediction_results"] += "/" + result_file
+
     # Get vocabulary and word vectors
     vocab, invocab, word2vec = get_vocab_and_vectors(
         p["word2vec_path"], norm_only=p["norm_vec"], oov=p["oov"],
@@ -82,7 +115,7 @@ def run_fnn():
         frame_threshold=p["minimum_frame"], 
         verb_index=p["verb_index"]
     )
-    if on_validation:
+    if p["on_validation"]:
         test = validation
 
     field_names = [
@@ -118,7 +151,7 @@ def run_fnn():
             minibatch=p["minibatch"],
             max_epochs=p["max_epochs"],
             split_pos=train[verb][2],
-            verbose=training_detail
+            verbose=p["training_detail"]
         )
 
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
