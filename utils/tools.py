@@ -194,11 +194,13 @@ def get_vocab_and_vectors(word2vec_path, norm_only, oov,\
     ).astype(dtype=dtype, copy=False)
     return [vocab, invocab, word2vec]
 
-def build_vocab(corpus_dir, random_wordvec=False, dimension=300):
+def build_vocab(corpus_dir, oov="O_O_V", random_wordvec=False, dimension=300):
     """Build vocabulary from given corpus
 
     :corpus_dir: The directory of the given corpus. Multiple files will be
     count in corpus_dir.
+    :oov: Out of vocabulary. Defining a oov is helpful when meet some unknown
+    words in the test dataset
     :random_wordvec: Whether generate random word vector
     :dimension: If random_wordvec is true, dimension indicates the dimension of
     the word vector.
@@ -236,6 +238,10 @@ def build_vocab(corpus_dir, random_wordvec=False, dimension=300):
                     word_counter += 1
         fh.close()
 
+    # Add oov to vocab
+    if oov not in vocab:
+        vocab[oov] = max(vocab.values()) + 1
+        invocab[vocab[oov]] = oov
     if random_wordvec:
         word2vec = np.random.uniform(
             low=-1.0, high=1.0, size=(len(vocab.keys()), dimension)
@@ -293,7 +299,7 @@ def sigmoid_test():
     print(sigmoid_array(x))
 
 def build_vocab_test(): 
-    vocab, invocab, word2vec = build_vocab("../data/pdev", True, 5)
+    vocab, invocab, word2vec = build_vocab("../data/pdev", "O_O_V", True, 5)
     #  print(len(vocab.keys()))
     #  print(vocab)
     #  print(invocab)

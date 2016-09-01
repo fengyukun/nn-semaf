@@ -35,7 +35,7 @@ class DataLoader(object):
     """
     def __init__(self, data_path, vocab, oov, left_win=5, right_win=5,
                  use_verb=False, lower=False, use_padding=True,
-                 show_key_words=False, key_words_tag="_key_words_tag"):
+                 show_key_words=False, key_words_tag="keywordtag"):
         """
         vocab: dict, word to word index. The vocab must have oov and keep
         oov_index=vocab[oov]
@@ -181,8 +181,7 @@ def test_data_loader():
     p = {
         "word2vec_path": "../data/sample_word2vec.txt",
         "vec_binary": False,
-        #  "data_path": "../data/sample/",
-        "data_path": "./tmp_data/",
+        "data_path": "../data/show_key_words_chn_propbank",
         "oov": "O_O_V",
         "left_win": -1,
         "right_win": -1,
@@ -191,18 +190,24 @@ def test_data_loader():
         "use_padding": False,
         "verb_index": True,
         "show_key_words": True,
-        "key_words_tag": "_key_words_tag"
+        "key_words_tag": "keywordtag"
     }
-    # Generate vocab
-    vec_model = gensim.models.Word2Vec.load_word2vec_format(
-        p["word2vec_path"], binary=p["vec_binary"]
-    )
-    vocab = {}
-    for word, obj in vec_model.vocab.items():
-        vocab[word] = obj.index
+    # Generate vocab (One method)
+    #  vec_model = gensim.models.Word2Vec.load_word2vec_format(
+        #  p["word2vec_path"], binary=p["vec_binary"]
+    #  )
+    #  vocab = {}
+    #  for word, obj in vec_model.vocab.items():
+        #  vocab[word] = obj.index
     # Add oov to vocab
-    vocab[p["oov"]] = max(vocab.values()) + 1
-    index2word_vocab = {k:v for v, k in vocab.items()}
+    #  vocab[p["oov"]] = max(vocab.values()) + 1
+    #  index2word_vocab = {k:v for v, k in vocab.items()}
+
+    # Secomd method
+    vocab, index2word_vocab, word2vec = build_vocab(
+        corpus_dir=p["data_path"], oov=p["oov"],
+        random_wordvec=True, dimension=5
+    )
 
     data_loader = DataLoader(
         data_path=p["data_path"],
@@ -217,7 +222,7 @@ def test_data_loader():
         key_words_tag=p["key_words_tag"]
     )
     train, test, validation = data_loader.get_data(
-        1, 0., 0., verb_index=p["verb_index"]
+        0.01, 0., 0., verb_index=p["verb_index"]
     )
     for verb in train.keys():
         print("verb:%s" % verb)
