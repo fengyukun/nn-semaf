@@ -208,7 +208,40 @@ def build_vocab(corpus_dir, random_wordvec=False, dimension=300):
         word2vec: numpy.ndarray, 2d, row index is the word id
 
     """
-    pass
+
+    # Dict, key is word id(Start from 0)
+    vocab = {}
+    invocab = {}
+    word_counter = 0
+    file_list = os.listdir(corpus_dir)
+    for file_name in file_list:
+        # Skip hidden file
+        if file_name.find(".") == 0:
+            continue
+        file_path = "%s/%s" % (corpus_dir, file_name)
+        fh = open(file_path, "r")
+        for line in fh:
+            line = line.strip()
+            # Skip empty line
+            if line == '':
+                continue
+            try:
+                tokens = line.split()
+            except:
+                tokens = [line]
+            for token in tokens:
+                if token not in vocab:
+                    vocab[token] = word_counter
+                    invocab[word_counter] = token
+                    word_counter += 1
+        fh.close()
+
+    if random_wordvec:
+        word2vec = np.random.uniform(
+            low=-1.0, high=1.0, size=(len(vocab.keys()), dimension)
+        )
+        return [vocab, invocab, word2vec]
+    return [vocab, invocab]
 
 def basic_test():
     sents = [["I", "have ", "done"], ["apple", "and", "food"]]
@@ -259,10 +292,17 @@ def sigmoid_test():
     x = np.array([[1, 0, 0, 1000], [-1000, 0, 29, 0.32]])
     print(sigmoid_array(x))
 
+def build_vocab_test(): 
+    vocab, invocab, word2vec = build_vocab("../data/pdev", True, 5)
+    #  print(len(vocab.keys()))
+    #  print(vocab)
+    #  print(invocab)
+    #  print(word2vec.shape)
 
 if __name__ == "__main__":
     # basic_test()
     # get_vocab_and_vectors_test()
-    sigmoid_test()
+    #  sigmoid_test()
+    build_vocab_test()
 
 
