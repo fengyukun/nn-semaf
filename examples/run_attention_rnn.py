@@ -47,7 +47,7 @@ def run_fnn():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("data_path", "../data/pdev"),
+        ("data_path", "../data/show_key_words_chn_propbank"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -63,7 +63,7 @@ def run_fnn():
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
-        ("n_h", 35), # ATTENTION TO THIS
+        ("n_h", 65), # ATTENTION TO THIS
         ("up_wordvec", False),
         ("use_bias", True),
         ("act_func", "tanh"),
@@ -72,8 +72,8 @@ def run_fnn():
         ("minibatch", 5),
         ("lr", 0.1),
         ("norm_func",'softmax'),
-        ("random_vectors", False),
-        ("show_key_words",False), # ATTENTION TO THIS
+        ("random_vectors", True), # ATTENTION TO THIS
+        ("show_key_words",True), # ATTENTION TO THIS
         ("key_words_tag", "keywordtag"),
         ("\nOther parameters", ""),
         ("on_validation", True), # ATTENTION TO THIS
@@ -93,14 +93,16 @@ def run_fnn():
               p["prediction_results"])
         exit(0)
 
-    # Get vocabulary and word vectors
-    vocab, invocab, word2vec = get_vocab_and_vectors(
-        p["word2vec_path"], norm_only=p["norm_vec"], oov=p["oov"],
-        oov_vec_padding=0., dtype=FLOAT, file_format="auto"
-    )
     if p["random_vectors"]:
-        word2vec = np.array(
-            np.random.uniform(low=-0.5, high=0.5, size=word2vec.shape)
+        vocab, invocab, word2vec = build_vocab(
+            corpus_dir=p["data_path"], oov=p["oov"],
+            random_wordvec=True, dimension=300
+        )
+    else:
+        # Get vocabulary and word vectors
+        vocab, invocab, word2vec = get_vocab_and_vectors(
+            p["word2vec_path"], norm_only=p["norm_vec"], oov=p["oov"],
+            oov_vec_padding=0., dtype=FLOAT, file_format="auto"
         )
     # Updating word vectors only happens for one verb
     #   So when one verb is done, word vectors should recover
