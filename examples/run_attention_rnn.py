@@ -47,7 +47,7 @@ def run_fnn():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("data_path", "../data/show_key_words_wsj_propbank"),
+        ("data_path", "../data/pdev"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -59,7 +59,7 @@ def run_fnn():
         ("test_part", 0.2),
         ("validation_part", 0.1),
         # Minimum number of sentences of training data
-        ("minimum_sent_num", 70), # ATTENTION TO THIS
+        ("minimum_sent_num", 100), # ATTENTION TO THIS
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
@@ -73,7 +73,7 @@ def run_fnn():
         ("lr", 0.1),
         ("norm_func",'softmax'),
         ("random_vectors", False),
-        ("show_key_words",True),
+        ("show_key_words",False), # ATTENTION TO THIS
         ("key_words_tag", "keywordtag"),
         ("\nOther parameters", ""),
         ("on_validation", True), # ATTENTION TO THIS
@@ -87,6 +87,11 @@ def run_fnn():
     if not os.path.isdir(p["prediction_results"]):
         os.system("mkdir -p %s" % p["prediction_results"])
     p["prediction_results"] += "/" + result_file
+
+    if os.path.exists(p["prediction_results"]):
+        print("%s has existed, reindicate a result file" %
+              p["prediction_results"])
+        exit(0)
 
     # Get vocabulary and word vectors
     vocab, invocab, word2vec = get_vocab_and_vectors(
