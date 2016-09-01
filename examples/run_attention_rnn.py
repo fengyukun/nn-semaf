@@ -59,7 +59,7 @@ def run_fnn():
         ("test_part", 0.2),
         ("validation_part", 0.1),
         # Minimum number of sentences of training data
-        ("minimum_sent_num", 100), # ATTENTION TO THIS
+        ("minimum_sent_num", 70), # ATTENTION TO THIS
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
@@ -88,10 +88,10 @@ def run_fnn():
         os.system("mkdir -p %s" % p["prediction_results"])
     p["prediction_results"] += "/" + result_file
 
-    if os.path.exists(p["prediction_results"]):
-        print("%s has existed, reindicate a result file" %
-              p["prediction_results"])
-        exit(0)
+    #  if os.path.exists(p["prediction_results"]):
+        #  print("%s has existed, reindicate a result file" %
+              #  p["prediction_results"])
+        #  exit(0)
 
     if p["random_vectors"]:
         vocab, invocab, word2vec = build_vocab(
