@@ -16,9 +16,6 @@ from metrics import*
 from brnn import BRNN
 from attention_birnn import ABiRNN
 from collections import OrderedDict
-from parameter_setting import*
-
-
 
 
 def gen_print_info(field_names, values):
@@ -63,7 +60,7 @@ def run_fnn():
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
-        ("n_h", 65), # ATTENTION TO THIS
+        ("n_h", 45), # ATTENTION TO THIS
         ("up_wordvec", False),
         ("use_bias", True),
         ("act_func", "tanh"),
@@ -76,7 +73,7 @@ def run_fnn():
         ("show_key_words",True), # ATTENTION TO THIS
         ("key_words_tag", "keywordtag"),
         ("\nOther parameters", ""),
-        ("on_validation", True), # ATTENTION TO THIS
+        ("on_validation", False), # ATTENTION TO THIS
         ("training_detail", False), # ATTENTION TO THIS
         ("prediction_results", "../result/attention_results")
     ])

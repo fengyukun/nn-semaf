@@ -14,7 +14,7 @@ from tools import*
 from data_loader import DataLoader
 from metrics import*
 from fnn import FNN
-from parameter_setting import*
+from collections import OrderedDict
 
 
 def gen_print_info(field_names, values):
@@ -43,9 +43,9 @@ def run_fnn():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("data_path", "../data/chn_propbank/"),
-        ("left_win", 2),
-        ("right_win", 2),
+        ("data_path", "../data/chn_propbank"),
+        ("left_win", 4),
+        ("right_win", 4),
         ("use_verb", True),
         ("lower", True),
         # Validation part and train_part are from train_data_path
@@ -66,7 +66,7 @@ def run_fnn():
         ("lr", 0.1),
         ("random_vectors", True), # ATTENTION TO THIS
         ("\nOther parameters", ""),
-        ("on_validation", True), # ATTENTION TO THIS
+        ("on_validation", False), # ATTENTION TO THIS
         ("training_detail", False), # ATTENTION TO THIS
         ("prediction_results", "../result/attention_results")
     ])

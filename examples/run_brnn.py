@@ -16,7 +16,6 @@ from metrics import*
 from brnn import BRNN
 from attention_birnn import ABiRNN
 from collections import OrderedDict
-from parameter_setting import*
 
 
 def gen_print_info(field_names, values):

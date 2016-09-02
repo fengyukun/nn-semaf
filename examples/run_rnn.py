@@ -15,7 +15,7 @@ from tools import*
 from data_loader import DataLoader
 from metrics import*
 from rnn import RNN
-from parameter_setting import*
+from collections import OrderedDict
 
 
 def gen_print_info(field_names, values):
@@ -45,8 +45,8 @@ def run_fnn():
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
         ("data_path", "../data/chn_propbank"),
-        ("left_win", 4),
-        ("right_win", 4),
+        ("left_win", -1),
+        ("right_win", -1),
         ("use_verb", True),
         ("lower", True),
         ("use_padding", False),
@@ -59,7 +59,7 @@ def run_fnn():
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
-        ("n_h", 65), # ATTENTION TO THIS
+        ("n_h", 55), # ATTENTION TO THIS
         ("up_wordvec", False),
         ("use_bias", True),
         ("act_func", "tanh"),
@@ -69,7 +69,7 @@ def run_fnn():
         ("lr", 0.1),
         ("random_vectors", True), # ATTENTION TO THIS
         ("\nOther parameters", ""),
-        ("on_validation", True), # ATTENTION TO THIS
+        ("on_validation", False), # ATTENTION TO THIS
         ("training_detail", False), # ATTENTION TO THIS
         ("prediction_results", "../result/attention_results")
     ])
