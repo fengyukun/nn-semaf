@@ -44,7 +44,7 @@ def run_fnn():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("data_path", "../data/show_key_words_chn_propbank"),
+        ("data_path", "../data/show_key_words_wsj_verbnet"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -60,7 +60,7 @@ def run_fnn():
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
-        ("n_h", 45), # ATTENTION TO THIS
+        ("n_h", 120), # ATTENTION TO THIS
         ("up_wordvec", False),
         ("use_bias", True),
         ("act_func", "tanh"),
@@ -73,13 +73,11 @@ def run_fnn():
         ("show_key_words",True), # ATTENTION TO THIS
         ("key_words_tag", "keywordtag"),
         ("\nOther parameters", ""),
-        ("on_validation", False), # ATTENTION TO THIS
-        ("training_detail", False), # ATTENTION TO THIS
+        ("training_detail", True), # ATTENTION TO THIS
         ("prediction_results", "../result/attention_results")
     ])
-    result_file = "n_h%s_lr%s_%s.valid%s" % (p["n_h"], p["lr"],
-                                os.path.basename(p["data_path"]),
-                                p["on_validation"])
+    result_file = "attention_n_h%s_lr%s_%s" % (p["n_h"], p["lr"],
+                                     os.path.basename(p["data_path"]))
 
     if not os.path.isdir(p["prediction_results"]):
         os.system("mkdir -p %s" % p["prediction_results"])
@@ -119,18 +117,19 @@ def run_fnn():
         frame_threshold=p["minimum_frame"], 
         verb_index=p["verb_index"]
     )
-    if p["on_validation"]:
-        test = validation
 
     field_names = [
         'precision', 'recall', 'f-score',
         "sentence number (train data)",
         "sentence number (test data)",
         "frame number(test data)",
-        'epoch'
+        "epoch (train process)",
+        "sentence number (validation data)",
+        "valid_fscore"
     ]
     if p["show_key_words"]:
-        field_names.append("map_score")
+        field_names.append("test_map_score")
+        field_names.append("valid_map_score")
     # Average statistics over all verbs
     scores_overall = np.zeros(len(field_names), dtype=FLOAT)
     verb_counter = 0
@@ -158,23 +157,39 @@ def run_fnn():
             verbose=p["training_detail"]
         )
 
+        # Run trained model on test data
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
         attention_matrix = rnn.attention_matrix
-        precision, recall, f_score, _, _ = standard_score(
+        test_p, test_r, test_f, _, _ = standard_score(
             y_true=test[verb][1], y_pred=y_pred
         )
+
+        # Run trained model on validation data
+        valid_pred = rnn.predict(
+            validation[verb][0], split_pos=validation[verb][2]
+        )
+        valid_attention_matrix = rnn.attention_matrix
+        valid_p, valid_r, valid_f, _, _ = standard_score(
+            y_true=validation[verb][1], y_pred=valid_pred
+        )
+
         scores = [
-            precision, recall, f_score,
+            test_p, test_r, test_f,
             len(train[verb][1]),
             len(test[verb][1]),
             len(set(test[verb][1])),
-            epoch
+            epoch, len(validation[verb][1]), valid_f
         ]
         if p["show_key_words"]:
             map_score = mean_average_precision(
                 y_trues_array=test[verb][3], y_scores_array=attention_matrix
             )
+            valid_map_score = mean_average_precision(
+                y_trues_array=validation[verb][3],
+                y_scores_array=valid_attention_matrix
+            )
             scores.append(map_score)
+            scores.append(valid_map_score)
         scores_overall += scores
         print("current verb:%s, scores are:" % verb)
         print(gen_print_info(field_names, scores))
@@ -184,7 +199,7 @@ def run_fnn():
 
         # Print prediction results
         sents = indexs2sents(test[verb][0], invocab)
-        print("verb: %s\tf-score:%f" % (verb, f_score), file=fh_pr)
+        print("verb: %s\tf-score:%f" % (verb, test_f), file=fh_pr)
         for i in range(0, len(test[verb][1])):
             is_true = True if test[verb][1][i] == y_pred[i] else False
             out_line = "%s\tpredict:%s\ttrue:%s\t" % (is_true, y_pred[i], test[verb][1][i])
