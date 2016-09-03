@@ -25,10 +25,11 @@ def convert_chn_propbank(detail=True):
     Convert Chinese propbank
     """
     chn_propbank_file = "../../../nltk_data/cpb2/data/verbs.txt.utf8"
-    show_key_words = True
+    show_key_words = False
     key_word_tag = "keywordtag"
 
-    out_dir = "../data/show_key_words_chn_propbank/"
+    #  out_dir = "../data/show_key_words_chn_propbank/"
+    out_dir = "../data/chn_propbank/"
     os.system("rm -rf %s" % out_dir)
     os.system("mkdir -p %s" % out_dir)
 
@@ -844,11 +845,11 @@ def convert_pdev(detail=True):
 if __name__ == "__main__":
     # convert_semeval_without_extraction()
     #  convert_semeval_with_extraction()
-    convert_semeval_with_key_words_showing()
+    #  convert_semeval_with_key_words_showing()
     # convert_pdev()
     # convert_chn_text()
     #  convert_propbank()
     #  convert_semlink_wsj2()
     #  merge_split_data()
-    #  convert_chn_propbank()
+    convert_chn_propbank()
 
