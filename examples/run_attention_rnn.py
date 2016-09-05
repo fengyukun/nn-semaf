@@ -44,7 +44,7 @@ def run_fnn():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("data_path", "../data/show_key_words_wsj_verbnet"),
+        ("data_path", "../data/show_key_words_wsj_framnet"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -56,7 +56,7 @@ def run_fnn():
         ("test_part", 0.2),
         ("validation_part", 0.1),
         # Minimum number of sentences of training data
-        ("minimum_sent_num", 70), # ATTENTION TO THIS
+        ("minimum_sent_num", 100), # ATTENTION TO THIS
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
@@ -69,7 +69,7 @@ def run_fnn():
         ("minibatch", 5),
         ("lr", 0.1),
         ("norm_func",'softmax'),
-        ("random_vectors", True), # ATTENTION TO THIS
+        ("random_vectors", False), # ATTENTION TO THIS
         ("show_key_words",True), # ATTENTION TO THIS
         ("key_words_tag", "keywordtag"),
         ("\nOther parameters", ""),

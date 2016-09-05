@@ -43,8 +43,8 @@ def run_fnn():
         ("norm_vec", False),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
-        #  ("data_path", "../data/sample"),
-        ("data_path", "../data/chn_propbank"),
+        ("data_path", "../data/sample"),
+        #  ("data_path", "../data/chn_propbank"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -70,13 +70,11 @@ def run_fnn():
         ("lr", 0.1),
         ("random_vectors", True), # ATTENTION TO THIS
         ("\nOther parameters", ""),
-        ("on_validation", False), # ATTENTION TO THIS
         ("training_detail", False), # ATTENTION TO THIS
         ("prediction_results", "../result/attention_results")
     ])
-    result_file = "n_h%s_lr%s_%s.valid%s" % (p["n_h"], p["lr"],
-                                os.path.basename(p["data_path"]),
-                                p["on_validation"])
+    result_file = "n_h%s_lr%s_%s" % (p["n_h"], p["lr"],
+                                os.path.basename(p["data_path"]))
 
     if not os.path.isdir(p["prediction_results"]):
         os.system("mkdir -p %s" % p["prediction_results"])
@@ -115,16 +113,17 @@ def run_fnn():
         frame_threshold=p["minimum_frame"], 
         verb_index=p["verb_index"]
     )
-    if p["on_validation"]:
-        test = validation
 
     field_names = [
         'precision', 'recall', 'f-score',
         "sentence number (train data)",
         "sentence number (test data)",
         "frame number(test data)",
-        'epoch'
+        "epoch (train process)",
+        "sentence number (validation data)",
+        "valid_fscore"
     ]
+
     # Average statistics over all verbs
     scores_overall = np.zeros(len(field_names), dtype=FLOAT)
     verb_counter = 0
@@ -152,16 +151,23 @@ def run_fnn():
         )
 
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
-
         precision, recall, f_score, _, _ = standard_score(
             y_true=test[verb][1], y_pred=y_pred
         )
+        valid_pred = rnn.predict(validation[verb][0],
+                                 split_pos=validation[verb][2])
+        _, _, valid_f, _, _ = standard_score(
+            y_true=validation[verb][1], y_pred=valid_pred
+        )
+
         scores = [
             precision, recall, f_score,
             len(train[verb][1]),
             len(test[verb][1]),
             len(set(test[verb][1])),
-            epoch
+            epoch,
+            len(validation[verb][1]),
+            valid_f
         ]
         scores_overall += scores
         print("current verb:%s, scores are:" % verb)
