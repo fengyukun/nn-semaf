@@ -358,7 +358,9 @@ def load_semlink(detail=True):
                             x for x in range(wordnum, wordnum + height + 1)
                         ]
                         argument_list.extend(pos_list)
-                argument_list.append(int(verb_pos))
+                # The following line is commented because this verb_pos
+                # sometimes is different to verb_pos in propbank (now I used)
+                #  argument_list.append(int(verb_pos))
                 # Remove duplicate
                 argument_list = list(set(argument_list))
 
@@ -394,7 +396,7 @@ def convert_semlink_wsj2(detail=True):
     out_files = ["wsj.framenet", "wsj.verbnet", "wsj.sense"]
     frame_indexs = [4, 3, 6]
     corpus_names = ["framenet_frame", "verbnet_class", "si_grouping"]
-    excludes = [0]
+    excludes = [2]
     for t in range(0, len(out_dirs)):
         if t in excludes:
             continue
@@ -450,6 +452,9 @@ def convert_semlink_wsj2(detail=True):
             # Show key words
             if show_key_words:
                 argument_list = sl_taginfo[7]
+                # Add verb pos if it doesn't have
+                if verb_pos in argument_list:
+                    argument_list.append(verb_pos)
                 for word_pos in range(0, len(tagged_sent)):
                     if word_pos not in argument_list:
                         continue
@@ -848,8 +853,8 @@ if __name__ == "__main__":
     #  convert_semeval_with_key_words_showing()
     # convert_pdev()
     # convert_chn_text()
-    #  convert_propbank()
+    convert_propbank()
     #  convert_semlink_wsj2()
     #  merge_split_data()
-    convert_chn_propbank()
+    #  convert_chn_propbank()
 

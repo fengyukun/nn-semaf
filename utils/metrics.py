@@ -34,6 +34,9 @@ def average_precision(y_trues, y_scores):
         is_hit = ranked_items[i][1]
         relative_item_num += is_hit
         average_precision_score += is_hit * (relative_item_num / (i + 1))
+    # No relative item
+    if relative_item_num == 0:
+        return 1
     average_precision_score /= relative_item_num
     return average_precision_score
     
