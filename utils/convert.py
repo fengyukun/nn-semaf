@@ -453,7 +453,7 @@ def convert_semlink_wsj2(detail=True):
             if show_key_words:
                 argument_list = sl_taginfo[7]
                 # Add verb pos if it doesn't have
-                if verb_pos in argument_list:
+                if verb_pos not in argument_list:
                     argument_list.append(verb_pos)
                 for word_pos in range(0, len(tagged_sent)):
                     if word_pos not in argument_list:
@@ -853,8 +853,8 @@ if __name__ == "__main__":
     #  convert_semeval_with_key_words_showing()
     # convert_pdev()
     # convert_chn_text()
-    convert_propbank()
-    #  convert_semlink_wsj2()
+    #  convert_propbank()
+    convert_semlink_wsj2()
     #  merge_split_data()
     #  convert_chn_propbank()
 
