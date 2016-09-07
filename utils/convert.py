@@ -334,6 +334,8 @@ def load_semlink(detail=True):
 
                 # Find arguments of target verb
                 arguments = items[10:]
+                # Current version of Semlink has some bugs on the position of
+                # the word. So these codes are kept but not used now.
                 # arguments, e.g., 0:1-ARG0=Agent 3:0-rel 6:2-ARG1=Topic
                 argument_list = []
                 for argument in arguments:
@@ -362,6 +364,7 @@ def load_semlink(detail=True):
                 # sometimes is different to verb_pos in propbank (now I used)
                 #  argument_list.append(int(verb_pos))
                 # Remove duplicate
+                # 2016-09-07 Not used now
                 argument_list = list(set(argument_list))
 
                 sl_wsj_labels[doc].append([sent_id, verb_pos, verb, verbnet_class,
@@ -389,7 +392,7 @@ def convert_semlink_wsj2(detail=True):
     show_key_words = True
     key_word_tag = "keywordtag"
 
-    out_dirs = ["../data/show_key_words_wsj_framnet/",
+    out_dirs = ["../data/show_key_words_wsj_framenet/",
                 "../data/show_key_words_wsj_verbnet/",
                 "../data/show_key_words_wsj_sense"]
     sents_thresholds = [300, 300, 300]
@@ -424,6 +427,35 @@ def convert_semlink_wsj2(detail=True):
             fileid = inst.fileid
             sent_num = inst.sentnum
             verb_pos = inst.wordnum
+            ##############################################
+            #  Extract the arugments of the target verb  #
+            ##############################################
+            arguments = inst.arguments
+            argument_word_pos = []
+            for argloc, argid in arguments:
+                # pos is something like "22:1,24:0,25:1*27:0"
+                pos = str(argloc)
+                # After relacing pos is something like "22:1 24:0 25:1 27:0"
+                pos = pos.replace(",", " ").replace("*", " ")
+                # Single item, e.g., 22:1
+                if pos.find(" ") < 0:
+                    items = [pos]
+                else:
+                    items = pos.split(" ")
+                # Multiple items
+                for item in items:
+                    wordnum, height = item.split(":")
+                    wordnum = int(wordnum)
+                    height = int(height)
+                    pos_list = [
+                        x for x in range(wordnum, wordnum + height + 1)
+                    ]
+                    argument_word_pos.extend(pos_list)
+            # Add verb pos. Verb itself is the argument
+            argument_word_pos.append(verb_pos)
+            # Remove duplicate pos
+            argument_word_pos = list(set(argument_word_pos))
+            
             verb_lemma, _ = inst.roleset.split(".")
             section = [x for x in fileid if x.isdigit()][0:2]
             section = "".join(section)
@@ -451,12 +483,8 @@ def convert_semlink_wsj2(detail=True):
 
             # Show key words
             if show_key_words:
-                argument_list = sl_taginfo[7]
-                # Add verb pos if it doesn't have
-                if verb_pos not in argument_list:
-                    argument_list.append(verb_pos)
                 for word_pos in range(0, len(tagged_sent)):
-                    if word_pos not in argument_list:
+                    if word_pos not in argument_word_pos:
                         continue
                     word = tagged_sent[word_pos][0]
                     if (word.find("*") >=0
