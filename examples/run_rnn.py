@@ -43,10 +43,10 @@ def run_fnn():
         ("norm_vec", False),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
-        ("data_path", "../data/sample"),
-        #  ("data_path", "../data/chn_propbank"),
-        ("left_win", 4),
-        ("right_win", 4),
+        #  ("data_path", "../data/sample"),
+        ("data_path", "../data/salsa-parsed"),
+        ("left_win", -1),
+        ("right_win", -1),
         ("use_verb", True),
         ("lower", True),
         ("use_padding", False),
@@ -59,7 +59,7 @@ def run_fnn():
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
-        ("n_h", 55), # ATTENTION TO THIS
+        ("n_h", 45), # ATTENTION TO THIS
         ("up_wordvec", False),
         ("use_bias", True),
         ("act_func", "tanh"),
