@@ -7,7 +7,7 @@ Network (ABiRNN). This class is implemented for comparing.
 """
 
 import sys
-sys.path.append("./lib/")
+sys.path.append("../lib/")
 sys.path.append("../utils/")
 from inc import*
 from gradient_checker import GradientChecker

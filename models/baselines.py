@@ -6,7 +6,7 @@ Brief:  The implementation of baselines: Random and most frequent (MF)
 """
 
 import sys
-sys.path.append("./lib/")
+sys.path.append("../lib/")
 sys.path.append("../utils/")
 from inc import*
 

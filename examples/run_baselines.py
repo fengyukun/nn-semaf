@@ -6,7 +6,7 @@ Brief:  Examples of running baselines
 """
 
 import sys
-sys.path.append("../models/lib/")
+sys.path.append("../lib/")
 sys.path.append("../utils/")
 sys.path.append("../models/")
 from inc import*
@@ -38,7 +38,7 @@ def run_fnn():
     p = OrderedDict([
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
-        ("data_path", "../data/wsj_framnet"),
+        ("data_path", "../data/chn_propbank"),
         # Validation part and train_part are from train_data_path
         ("train_part", 0.7),
         ("test_part", 0.2),

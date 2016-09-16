@@ -6,7 +6,7 @@ Brief:  The implementation of Feedward Neural Network (FNN)
 """
 
 import sys
-sys.path.append("./lib/")
+sys.path.append("../lib/")
 sys.path.append("../utils/")
 from inc import*
 from gradient_checker import GradientChecker

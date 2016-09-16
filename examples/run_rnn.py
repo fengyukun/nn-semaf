@@ -7,7 +7,7 @@ Brief:  Examples of running models
 
 import sys
 import os
-sys.path.append("../models/lib/")
+sys.path.append("../lib/")
 sys.path.append("../utils/")
 sys.path.append("../models/")
 from inc import*
