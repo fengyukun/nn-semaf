@@ -5,6 +5,8 @@ Date:   2016/03/28
 Brief:  Metrics implementation
 """
 
+# Activate automatic float divison for python2.
+from __future__ import division
 #  from sklearn.metrics import precision_recall_fscore_support
 import logging
 logging.basicConfig(
@@ -140,11 +142,11 @@ def zero_one_loss(y_true, y_pred):
     return error / len(y_true)
 
 def micro_average_f1(y_true, y_pred):
-    """Calculate the micro-average F-score for classification tasks.
+    """Calculate the micro-average presion, recall and F-score for classification tasks.
 
     :y_true: 1d array like, the true labels
     :y_pred: 1d array like, the predicted labels by a model.
-    :returns: float number
+    :returns: (presion, recall, fscore)
 
     """
 
@@ -210,8 +212,8 @@ def micro_average_f1(y_true, y_pred):
     if (presion + recall == 0):
         fscore = 0
     else:
-        fscore = presion * recall / (presion + recall)
-    return fscore
+        fscore = 2 * presion * recall / (presion + recall)
+    return (presion, recall, fscore)
 
 def standard_score(y_true, y_pred):
     """
@@ -223,21 +225,22 @@ def standard_score(y_true, y_pred):
     return: [Precision(float), Recall(float), F-score(float)
             , class_id2fscore(dict), prop_class(dict)]
     """
-    # Compute micro-average score(precision, recall, f-score)
+    #  Compute micro-average score(precision, recall, f-score)
     #  prec_overall, rec_overall, f_overall, _ = precision_recall_fscore_support(
         #  y_true, y_pred, beta=1.0, pos_label=None, average="micro"
     #  )
     # Compute score and proportion of occurrences for each class in y_true for further analysis
-    class_ids = list(set(y_true))
+    #  class_ids = list(set(y_true))
     #  _, _, fscore_class, num_class = precision_recall_fscore_support(
         #  y_true, y_pred, beta=1.0, pos_label=None, average=None, labels=class_ids
     #  )
-    class_id2fscore = dict(zip(class_ids, fscore_class))
-    prop_class = [num / float(len(y_true)) for num in num_class]
-    class_id2prop = dict(zip(class_ids, prop_class))
+    #  class_id2fscore = dict(zip(class_ids, fscore_class))
+    #  prop_class = [num / float(len(y_true)) for num in num_class]
+    #  class_id2prop = dict(zip(class_ids, prop_class))
 
 
-    return [prec_overall, rec_overall, f_overall, class_id2fscore, class_id2prop]
+    #  return [prec_overall, rec_overall, f_overall, class_id2fscore, class_id2prop]
+    pass
 
 def test_bcubed_score():
     y_true = [1, 2, 4, 2, 1, 5, 3, 1, 5]
@@ -247,7 +250,7 @@ def test_bcubed_score():
 
 def test_standard_score():
     y_true = [0, 1, 0]
-    y_pred = [0, 0, 0]
+    y_pred = [2, 3, 4]
     res = standard_score(y_true, y_pred)
     print(res)
 
@@ -274,8 +277,11 @@ def test_average_precision():
     print("map result: %s" % map_score)
 
 def test_micro_average_fscore():
-    y_true = [0, 1, 0]
-    y_pred = [0, 1, 0]
+    y_true = [2, 3, 4, 0, 1, 0]
+    y_pred = [0, 0, 0, 4, 1, 0]
+    #  y_true = [0, 1, 0]
+    #  y_pred = [2, 3, 4]
+
     res = micro_average_f1(y_true, y_pred)
     print(res)
 
@@ -283,7 +289,7 @@ def test_micro_average_fscore():
 
 if __name__ == "__main__":
     # test_bcubed_score()
-    # test_standard_score()
+    #  test_standard_score()
     #  test_zero_one_loss()
     #  test_average_precision()
     test_micro_average_fscore()
