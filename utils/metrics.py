@@ -5,7 +5,7 @@ Date:   2016/03/28
 Brief:  Metrics implementation
 """
 
-from sklearn.metrics import precision_recall_fscore_support
+#  from sklearn.metrics import precision_recall_fscore_support
 import logging
 logging.basicConfig(
     level=logging.DEBUG, 
@@ -139,6 +139,80 @@ def zero_one_loss(y_true, y_pred):
             error += 1
     return error / len(y_true)
 
+def micro_average_f1(y_true, y_pred):
+    """Calculate the micro-average F-score for classification tasks.
+
+    :y_true: 1d array like, the true labels
+    :y_pred: 1d array like, the predicted labels by a model.
+    :returns: float number
+
+    """
+
+    # Check the length of y_true and y_pred
+    if len(y_true) != len(y_pred):
+        logging.error("The length of y_true and y_pred is not the same")
+        raise Exception
+
+    # The set of labels is based on y_true.
+    uniq_labels = list(set(y_true))
+    # Build a dict inversing the uniq_labels for acceleration when accessing the position of
+    # labels.
+    label_to_pos = {uniq_labels[i]: i for i in range(0, len(uniq_labels))}
+
+    # Build confusion matrix
+    confusion_matrix = []
+
+    # Init matrix (the row and column are considered as known labels and predicted labels
+    # respectively)
+    for i in range(0, len(uniq_labels)):
+        confusion_matrix.append([0 for k in range(0, len(uniq_labels))])
+    # Fill matrix
+    for i in range(0, len(y_true)):
+        if y_pred[i] not in uniq_labels:
+            continue
+        known_pos = label_to_pos[y_true[i]]
+        predicted_pos = label_to_pos[y_pred[i]]
+        confusion_matrix[known_pos][predicted_pos] += 1
+
+    # Count the true positive (tp), false positive (fp) and false negative (fn) instances for each
+    # label.
+    global_tp = 0
+    global_fp = 0
+    global_fn = 0
+    for i in range(0, len(uniq_labels)):
+        true_positive = confusion_matrix[i][i]
+        false_positive = 0
+        for j in range(0, len(uniq_labels)):
+            if i == j:
+                continue
+            false_positive += confusion_matrix[j][i]
+        false_negtive = 0
+        for j in range(0, len(uniq_labels)):
+            if i == j:
+                continue
+            false_negtive += confusion_matrix[i][j]
+        global_tp += true_positive
+        global_fp += false_positive
+        global_fn += false_negtive
+
+    # Calculate the presion and recall globally. Note sometimes the model may not give any labels
+    # in the y_true.
+    if (global_tp + global_fp == 0):
+        presion = 0
+    else:
+        presion = global_tp / (global_tp + global_fp)
+    if (global_tp + global_fn == 0):
+        recall = 0
+    else:
+        recall = global_tp / (global_tp + global_fn)
+
+    # Calculate the F-score
+    if (presion + recall == 0):
+        fscore = 0
+    else:
+        fscore = presion * recall / (presion + recall)
+    return fscore
+
 def standard_score(y_true, y_pred):
     """
     Calculating standard micro-average score for classification task
@@ -150,14 +224,14 @@ def standard_score(y_true, y_pred):
             , class_id2fscore(dict), prop_class(dict)]
     """
     # Compute micro-average score(precision, recall, f-score)
-    prec_overall, rec_overall, f_overall, _ = precision_recall_fscore_support(
-        y_true, y_pred, beta=1.0, pos_label=None, average="micro"
-    )
+    #  prec_overall, rec_overall, f_overall, _ = precision_recall_fscore_support(
+        #  y_true, y_pred, beta=1.0, pos_label=None, average="micro"
+    #  )
     # Compute score and proportion of occurrences for each class in y_true for further analysis
     class_ids = list(set(y_true))
-    _, _, fscore_class, num_class = precision_recall_fscore_support(
-        y_true, y_pred, beta=1.0, pos_label=None, average=None, labels=class_ids
-    )
+    #  _, _, fscore_class, num_class = precision_recall_fscore_support(
+        #  y_true, y_pred, beta=1.0, pos_label=None, average=None, labels=class_ids
+    #  )
     class_id2fscore = dict(zip(class_ids, fscore_class))
     prop_class = [num / float(len(y_true)) for num in num_class]
     class_id2prop = dict(zip(class_ids, prop_class))
@@ -199,10 +273,18 @@ def test_average_precision():
     map_score = mean_average_precision(y_trues_array, y_scores_array)
     print("map result: %s" % map_score)
 
+def test_micro_average_fscore():
+    y_true = [0, 1, 0]
+    y_pred = [0, 1, 0]
+    res = micro_average_f1(y_true, y_pred)
+    print(res)
+
+
 
 if __name__ == "__main__":
     # test_bcubed_score()
     # test_standard_score()
     #  test_zero_one_loss()
-    test_average_precision()
+    #  test_average_precision()
+    test_micro_average_fscore()
 
