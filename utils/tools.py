@@ -9,8 +9,8 @@ import os
 import string
 import numpy as np
 from random import shuffle
-import gensim
-from gensim.models import Word2Vec
+#  import gensim
+#  from gensim.models import Word2Vec
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -139,6 +139,66 @@ def shuffle_two_lists(lista, listb):
         lista_shuf.append(lista[i])
         listb_shuf.append(listb[i])
     return (lista_shuf, listb_shuf)
+
+def load_word_vectors(vector_path):
+    """Load GloVe vectors. The format of vector is one word and its float values per line seperated
+    by only space characters (e.g., '\t', ' ').
+
+    :vector_path: str, the GloVe word vectors path
+    return [vocab(dict), inverse_vocab(dict), word2vec(numpy.ndarray)]
+
+    """
+
+    #  First read to count the number of words as well as the dimension of each vector.
+    first_line = True
+    word_count = 0
+    vector_dimension = 0
+    fh = open(vector_path, "r")
+    for word_line in fh:
+        word_line = word_line.strip()
+        if word_line == '':
+            continue
+        word_count += 1
+        if first_line:
+            try:
+                word_vector = word_line.split()
+                vector_dimension = len(word_vector) - 1
+            except Exception as e:
+                logging.error("Vector format error.")
+                raise Exception
+            first_line = False
+    fh.close()
+
+    # Second read to allocate the whole vectors based on the first read.
+    word2vec = np.zeros(shape=(word_count, vector_dimension), dtype=float)
+    vocab = {}
+    invocab = {}
+    word_index = 0
+    line_index = 0
+    fh = open(vector_path, "r")
+    for word_line in fh:
+        line_index += 1
+        word_line = word_line.strip()
+        if word_line == '':
+            continue
+        try:
+            word_vector = word_line.split()
+            word = word_vector[0]
+            vectors = [float(value) for value in word_vector[1:]]
+            if len(vectors) != vector_dimension:
+                raise Exception
+        except Exception as e:
+            logging.error("Vector format error. line: %s" % line_index)
+            raise Exception
+
+        for column_index in range(0, vector_dimension):
+            word2vec[word_index][column_index] = vectors[column_index]
+        vocab[word] = word_index
+        invocab[word_index] = word
+        word_index += 1
+    fh.close()
+
+    return [vocab, invocab, word2vec]
 
 def get_vocab_and_vectors(word2vec_path, norm_only, oov,\
         oov_vec_padding, dtype='float', file_format='auto'):
@@ -298,6 +358,16 @@ def sigmoid_test():
     x = np.array([[1, 0, 0, 1000], [-1000, 0, 29, 0.32]])
     print(sigmoid_array(x))
 
+def load_word_vectors_test():
+    vector_path = "../data/sample_word2vec.txt"
+    vocab, invocab, word2vec = load_word_vectors(vector_path)
+    print("vocab:")
+    print(vocab)
+    print("\ninvocab:")
+    print(invocab)
+    print("\nword vectors:")
+    print(word2vec)
+
 def build_vocab_test(): 
     vocab, invocab, word2vec = build_vocab("../data/pdev", "O_O_V", True, 5)
     #  print(len(vocab.keys()))
@@ -309,6 +379,7 @@ if __name__ == "__main__":
     # basic_test()
     # get_vocab_and_vectors_test()
     #  sigmoid_test()
-    build_vocab_test()
+    #  build_vocab_test()
+    load_word_vectors_test()
 
 
