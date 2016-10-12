@@ -5,6 +5,8 @@ Date:   2016-05-19
 Brief:  Common headers
 """
 
+# Activate automatic float divison for python2.
+from __future__ import division
 import numpy as np
 import logging
 
