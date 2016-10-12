@@ -9,12 +9,10 @@ import os
 import string
 import numpy as np
 from random import shuffle
-#  import gensim
-#  from gensim.models import Word2Vec
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format=" [%(levelname)s]%(filename)s:%(lineno)s[function:%(funcName)s] %(message)s"
+    format="[%(levelname)s]%(filename)s:%(lineno)s[function:%(funcName)s] %(message)s"
 )
 
 # Global data type
@@ -140,16 +138,22 @@ def shuffle_two_lists(lista, listb):
         listb_shuf.append(listb[i])
     return (lista_shuf, listb_shuf)
 
-def load_word_vectors(vector_path):
+def load_word_vectors(vector_path, add_oov=False, oov="O_O_V"):
     """Load GloVe vectors. The format of vector is one word and its float values per line seperated
     by only space characters (e.g., '\t', ' ').
 
     :vector_path: str, the GloVe word vectors path
+    :add_oov: boolean, whether out-of-vocabulary word is added to word2vec, which is often helpful
+    when meating some unknown words.
+    :oov: str, if add_oov is true the defined oov will be added to word2vec; zero vectors will be
+    used as the vectors of oov.
+    of oov 
     return [vocab(dict), inverse_vocab(dict), word2vec(numpy.ndarray)]
 
     """
 
     #  First read to count the number of words as well as the dimension of each vector.
+    logging.info("Start loading word vectors: %s", vector_path)
     first_line = True
     word_count = 0
     vector_dimension = 0
@@ -170,6 +174,8 @@ def load_word_vectors(vector_path):
     fh.close()
 
     # Second read to allocate the whole vectors based on the first read.
+    if add_oov:
+        word_count += 1
     word2vec = np.zeros(shape=(word_count, vector_dimension), dtype=float)
     vocab = {}
     invocab = {}
@@ -197,61 +203,12 @@ def load_word_vectors(vector_path):
         invocab[word_index] = word
         word_index += 1
     fh.close()
+    if add_oov:
+        vocab[oov] = word_index
+        invocab[word_index] = oov
+    logging.info("Finish loading. Add oov: %s. Word vector (shape): %s"
+                 % (add_oov, str(word2vec.shape)))
 
-    return [vocab, invocab, word2vec]
-
-def get_vocab_and_vectors(word2vec_path, norm_only, oov,\
-        oov_vec_padding, dtype='float', file_format='auto'):
-    """
-    Get vocabulary and word vectors from pre-trained word vectors,
-    such as GoogleNews-vectors-negative300.bin, Glove word vectors
-
-    word2vec_path: string, path of pre-trained word vectors
-    norm_only: bool, whether normlize these word vectors
-    oov: string, out of vocabulary, specify oov for model
-    oov_vec_padding: float, oov vector padding value
-    dtype: date type in word vectors, default value : float
-    file_format: three optional values:
-        binary: the file of word vectors is binary
-        text: the file of word vectors is text
-        auto: this function will infer its format automaticly from file name.
-            The file name of word vectors in binary format must be end with '.bin'
-            and this is same for '.txt' with text format
-
-    return [vocab(dict), inverse_vocab(dict), word2vec(numpy.ndarray)]
-
-    """
-    # File format
-    is_binary = ''
-    if file_format == 'auto':
-        _, ext = os.path.splitext(word2vec_path)
-        if ext == '.bin':
-            is_binary = True
-        elif ext == '.txt':
-            is_binary = False
-        else:
-            logging.error("word vectors: %s ambiguous format type" % word2vec_path)
-            raise Exception
-    else:
-        is_binary = True if file_format == 'binary' else False
-
-    # Load word vectors with gensim
-    vec_model = gensim.models.Word2Vec.load_word2vec_format(
-        word2vec_path, binary=is_binary
-    )
-    vocab = {}
-    for word, obj in vec_model.vocab.items():
-        vocab[word] = obj.index
-    # Add oov to vocab
-    vocab[oov] = max(vocab.values()) + 1
-    # Inverse vocab
-    invocab = {k:v for v, k in vocab.items()}
-    # Get word vectors
-    word2vec = np.append(
-        vec_model.syn0,
-        [[oov_vec_padding for i in range(0, vec_model.syn0.shape[1])]],
-        axis=0
-    ).astype(dtype=dtype, copy=False)
     return [vocab, invocab, word2vec]
 
 def build_vocab(corpus_dir, oov="O_O_V", random_wordvec=False, dimension=300):
@@ -347,20 +304,31 @@ def sigmoid_array(x):
     vfunc = np.vectorize(sigmoid)
     return vfunc(x)
 
-def get_vocab_and_vectors_test():
-    word2vec_path = "../data2vec.txt"
-    vocab, invocab, word2vec = get_vocab_and_vectors(
-        word2vec_path, norm_only=False, oov="OOV",
-        oov_vec_padding=0., dtype=FLOAT, file_format="auto"
-    )
-
 def sigmoid_test():
     x = np.array([[1, 0, 0, 1000], [-1000, 0, 29, 0.32]])
     print(sigmoid_array(x))
 
-def load_word_vectors_test():
+def load_word_vectors_stdin_test():
+    vector_path = "../data/word_vectors/glove.6B.300d.txt"
     vector_path = "../data/sample_word2vec.txt"
     vocab, invocab, word2vec = load_word_vectors(vector_path)
+    print("word2vec shape: %s" % str(word2vec.shape))
+
+    import fileinput
+    for test_word in fileinput.input():
+        test_word = test_word.strip()
+        if test_word == '':
+            continue
+        if test_word not in vocab:
+            print("%s not in %s" % (test_word, vector_path))
+            continue
+        print("the word vector of the test word:")
+        print(word2vec[vocab[test_word]])
+
+def load_word_vectors_test():
+    vector_path = "../data/sample_word2vec.txt"
+    vocab, invocab, word2vec = load_word_vectors(vector_path, add_oov=True, oov="O_O_V")
+    print("word2vec shape: %s" % str(word2vec.shape))
     print("vocab:")
     print(vocab)
     print("\ninvocab:")
@@ -377,9 +345,9 @@ def build_vocab_test():
 
 if __name__ == "__main__":
     # basic_test()
-    # get_vocab_and_vectors_test()
     #  sigmoid_test()
     #  build_vocab_test()
     load_word_vectors_test()
+    #  load_word_vectors_stdin_test()
 
 

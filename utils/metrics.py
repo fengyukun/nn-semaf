@@ -7,7 +7,6 @@ Brief:  Metrics implementation
 
 # Activate automatic float divison for python2.
 from __future__ import division
-#  from sklearn.metrics import precision_recall_fscore_support
 import logging
 logging.basicConfig(
     level=logging.DEBUG, 
@@ -215,43 +214,10 @@ def micro_average_f1(y_true, y_pred):
         fscore = 2 * presion * recall / (presion + recall)
     return (presion, recall, fscore)
 
-def standard_score(y_true, y_pred):
-    """
-    Calculating standard micro-average score for classification task
-
-    y_true: 1d array-like, the true values
-    y_pred: 1d array-like, the predicted values by a model
-
-    return: [Precision(float), Recall(float), F-score(float)
-            , class_id2fscore(dict), prop_class(dict)]
-    """
-    #  Compute micro-average score(precision, recall, f-score)
-    #  prec_overall, rec_overall, f_overall, _ = precision_recall_fscore_support(
-        #  y_true, y_pred, beta=1.0, pos_label=None, average="micro"
-    #  )
-    # Compute score and proportion of occurrences for each class in y_true for further analysis
-    #  class_ids = list(set(y_true))
-    #  _, _, fscore_class, num_class = precision_recall_fscore_support(
-        #  y_true, y_pred, beta=1.0, pos_label=None, average=None, labels=class_ids
-    #  )
-    #  class_id2fscore = dict(zip(class_ids, fscore_class))
-    #  prop_class = [num / float(len(y_true)) for num in num_class]
-    #  class_id2prop = dict(zip(class_ids, prop_class))
-
-
-    #  return [prec_overall, rec_overall, f_overall, class_id2fscore, class_id2prop]
-    pass
-
 def test_bcubed_score():
     y_true = [1, 2, 4, 2, 1, 5, 3, 1, 5]
     y_pred = [1, 2, 3, 2, 1, 6, 3, 4, 10]
     res = bcubed_score(y_true, y_pred, level="class")
-    print(res)
-
-def test_standard_score():
-    y_true = [0, 1, 0]
-    y_pred = [2, 3, 4]
-    res = standard_score(y_true, y_pred)
     print(res)
 
 def test_zero_one_loss():
@@ -289,7 +255,6 @@ def test_micro_average_fscore():
 
 if __name__ == "__main__":
     # test_bcubed_score()
-    #  test_standard_score()
     #  test_zero_one_loss()
     #  test_average_precision()
     test_micro_average_fscore()

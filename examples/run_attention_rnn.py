@@ -5,6 +5,8 @@ Date:   2016/03/29
 Brief:  Examples of running models
 """
 
+# For python2
+from __future__ import print_function
 import sys
 sys.path.append("../lib/")
 sys.path.append("../utils/")
@@ -38,13 +40,12 @@ def gen_print_info(field_names, values):
 def run_fnn():
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("word2vec_path", "../../word2vec/vector_model/glove.6B.300d.txt"),
-        ("norm_vec", False),
+        ("word2vec_path", "../data/sample_word2vec.txt"),
+        #  ("word2vec_path", "../../word2vec/vector_model/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("data_path", "../data/show_key_words_wsj_verbnet"),
+        ("data_path", "../data/sample/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -73,7 +74,7 @@ def run_fnn():
         ("show_key_words",True), # ATTENTION TO THIS
         ("key_words_tag", "keywordtag"),
         ("\nOther parameters", ""),
-        ("training_detail", True), # ATTENTION TO THIS
+        ("training_detail", False), # ATTENTION TO THIS
         ("prediction_results", "../result/attention_results")
     ])
     result_file = "attention_n_h%s_lr%s_%s" % (p["n_h"], p["lr"],
@@ -95,9 +96,8 @@ def run_fnn():
         )
     else:
         # Get vocabulary and word vectors
-        vocab, invocab, word2vec = get_vocab_and_vectors(
-            p["word2vec_path"], norm_only=p["norm_vec"], oov=p["oov"],
-            oov_vec_padding=0., dtype=FLOAT, file_format="auto"
+        vocab, invocab, word2vec = load_word_vectors(
+            p["word2vec_path"], add_oov=True,oov=p["oov"]
         )
     # Updating word vectors only happens for one verb
     #   So when one verb is done, word vectors should recover
@@ -160,7 +160,7 @@ def run_fnn():
         # Run trained model on test data
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
         attention_matrix = rnn.attention_matrix
-        test_p, test_r, test_f, _, _ = standard_score(
+        test_p, test_r, test_f = micro_average_f1(
             y_true=test[verb][1], y_pred=y_pred
         )
 
@@ -169,7 +169,7 @@ def run_fnn():
             validation[verb][0], split_pos=validation[verb][2]
         )
         valid_attention_matrix = rnn.attention_matrix
-        valid_p, valid_r, valid_f, _, _ = standard_score(
+        valid_p, valid_r, valid_f = micro_average_f1(
             y_true=validation[verb][1], y_pred=valid_pred
         )
 
@@ -210,6 +210,7 @@ def run_fnn():
     # File handles
     fhs = [fh_pr, sys.stdout]
     for fh in fhs:
+        pass
         print(gen_params_info(p), file=fh)
         print("End of training and testing, the average "
               "infomation over %d verbs are:" % len(verbs), file=fh)

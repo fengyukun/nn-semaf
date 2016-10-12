@@ -19,8 +19,6 @@ import os
 import nltk
 import numpy as np
 from random import shuffle
-import gensim
-from gensim.models import Word2Vec
 from tools import*
 
 import logging
@@ -192,18 +190,6 @@ def test_data_loader():
         "show_key_words": True,
         "key_words_tag": "keywordtag"
     }
-    # Generate vocab (One method)
-    #  vec_model = gensim.models.Word2Vec.load_word2vec_format(
-        #  p["word2vec_path"], binary=p["vec_binary"]
-    #  )
-    #  vocab = {}
-    #  for word, obj in vec_model.vocab.items():
-        #  vocab[word] = obj.index
-    # Add oov to vocab
-    #  vocab[p["oov"]] = max(vocab.values()) + 1
-    #  index2word_vocab = {k:v for v, k in vocab.items()}
-
-    # Secomd method
     vocab, index2word_vocab, word2vec = build_vocab(
         corpus_dir=p["data_path"], oov=p["oov"],
         random_wordvec=True, dimension=5

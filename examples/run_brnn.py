@@ -5,6 +5,8 @@ Date:   2016/03/29
 Brief:  Examples of running models
 """
 
+# For python2
+from __future__ import print_function
 import sys
 sys.path.append("../lib/")
 sys.path.append("../utils/")
@@ -38,9 +40,8 @@ def gen_print_info(field_names, values):
 def run_fnn():
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("word2vec_path", "../../word2vec/vector_model/glove.6B.300d.txt"),
-        ("norm_vec", False),
+        ("word2vec_path", "../data/sample_word2vec.txt"),
+        #  ("word2vec_path", "../../word2vec/vector_model/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         ("data_path", "../data/sample"),
@@ -92,9 +93,8 @@ def run_fnn():
         )
     else:
         # Get vocabulary and word vectors
-        vocab, invocab, word2vec = get_vocab_and_vectors(
-            p["word2vec_path"], norm_only=p["norm_vec"], oov=p["oov"],
-            oov_vec_padding=0., dtype=FLOAT, file_format="auto"
+        vocab, invocab, word2vec = load_word_vectors(
+            p["word2vec_path"], add_oov=True,oov=p["oov"]
         )
     # Updating word vectors only happens for one verb
     #   So when one verb is done, word vectors should recover
@@ -151,12 +151,12 @@ def run_fnn():
         )
 
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
-        precision, recall, f_score, _, _ = standard_score(
+        precision, recall, f_score = micro_average_f1(
             y_true=test[verb][1], y_pred=y_pred
         )
         valid_pred = rnn.predict(validation[verb][0],
                                  split_pos=validation[verb][2])
-        _, _, valid_f, _, _ = standard_score(
+        _, _, valid_f = micro_average_f1(
             y_true=validation[verb][1], y_pred=valid_pred
         )
 

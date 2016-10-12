@@ -5,6 +5,8 @@ Date:   2016/03/29
 Brief:  Examples of running baselines
 """
 
+# For python2
+from __future__ import print_function
 import sys
 sys.path.append("../lib/")
 sys.path.append("../utils/")
@@ -84,14 +86,14 @@ def run_fnn():
         # Most Frequent
         mf = MostFrequent(label_y)
         mf_ypred = mf.select(len(test[verb][0]))
-        _, _, mf_fscore, _, _ = standard_score(
+        _, _, mf_fscore = micro_average_f1(
             y_true=test[verb][1], y_pred=mf_ypred
         )
 
         # Random Selector
         rs = RandomSelector(label_y)
         rs_ypred = rs.select_array(len(test[verb][0]), p["from_set"])
-        _, _, rs_fscore, _, _ = standard_score(
+        _, _, rs_fscore = micro_average_f1(
             y_true=test[verb][1], y_pred=rs_ypred
         )
 
