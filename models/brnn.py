@@ -2,10 +2,13 @@
 """
 Authors: fengyukun
 Date: 2016-06-18
-Brief:  The implementation of Bidirectional Recurrent Neural Network (BRNN)
+Brief:  The implementation of Target Recurrent Neural Network (BRNN)
 """
 
+# For python2
+from __future__ import print_function
 import sys
+import os
 sys.path.append("../lib/")
 sys.path.append("../utils/")
 from inc import*
@@ -20,8 +23,8 @@ class BRNN(object):
     """
     Bidirectional Recurrent Neural Network (BRNN) class
     """
-    def __init__(self, x, label_y, word2vec, n_h, up_wordvec=False,
-                 use_bias=True, act_func='tanh', use_lstm=False):
+    def init(self, x, label_y, word2vec, n_h, up_wordvec=False,
+             use_bias=True, act_func='tanh', use_lstm=False):
         """
         Init BRNN
         x: numpy.ndarray, 2d jagged arry
@@ -94,6 +97,106 @@ class BRNN(object):
                                  use_bias=self.use_bias)
         self.params += self.softmax_layer.params
         self.param_names += self.softmax_layer.param_names
+
+    def write_to_files(self, target_dir):
+        """Write the attributes and the parameters to files
+
+        :target_dir: str, a directory where the attribute file and paramter file are. A directory
+        will be created if the target_dir does not exist.
+
+        """
+
+        try:
+            os.makedirs(target_dir)
+        except:
+            if not os.path.isdir(target_dir):
+                raise Exception("%s is not a directory" % (target_dir,))
+
+        # Write the attributes to file
+        attributes_file = open("%s/attributes.txt" % target_dir, "w")
+        print("%s %s %s %s %s %s %s" % (self.n_i, self.n_o, self.act_func, self.use_bias,
+              self.use_lstm, self.n_h, self.up_wordvec), file=attributes_file)
+        y_to_label = ",".join(['%s:%s' % (k, v) for k, v in self.y_to_label.items()]) 
+        print(y_to_label, file=attributes_file)
+        attributes_file.close()
+
+        # Write paramters to file
+        self.embedding_layer.write_to_files("%s/embedding_out.npz" % (target_dir,))
+        left_layer_dir = "%s/%s" % (target_dir, self.left_layer.__class__.__name__)
+        self.left_layer.write_to_files(left_layer_dir)
+        softmax_target_dir = "%s/%s" % (target_dir, self.softmax_layer.__class__.__name__)
+        self.softmax_layer.write_to_files(softmax_target_dir)
+        logging.info("Finish writting %s layer to %s" % (self.__class__.__name__, target_dir))
+
+    def load_from_files(self, target_dir):
+        """Load files to recover one object of this class.
+
+        :target_dir: str, a directory where the attribute file and paramter file are.
+
+        """
+
+        # Load attributes file
+        attributes_file = open("%s/attributes.txt" % target_dir, "r")
+        try:
+            (n_i, n_o, act_func, use_bias, use_lstm, n_h, up_wordvec) = (
+                attributes_file.readline().strip().split(" ")
+            )
+            self.n_i = int(n_i)
+            self.n_o = int(n_o)
+            self.act_func = act_func
+            if use_bias == 'True':
+                self.use_bias = True
+            else:
+                self.use_bias = False
+            if use_lstm == 'True':
+                self.use_lstm = True
+            else:
+                self.use_lstm = False
+            self.n_h = int(n_h)
+            if up_wordvec == 'True':
+                self.up_wordvec = True
+            else:
+                self.up_wordvec = False
+            y_to_label = attributes_file.readline().strip().split(',')
+            self.y_to_label = {}
+            for key_value in y_to_label:
+                key, value = key_value.split(":")
+                self.y_to_label[int(key)] = value
+        except:
+            raise Exception("%s/attributes.txt format error" % target_dir)
+        attributes_file.close()
+        
+        # Load parameters file
+
+        self.embedding_layer = layer.EmbeddingLayer()
+        self.embedding_layer.load_from_files("%s/embedding_out.npz" % (target_dir,))
+
+        self.layers = []
+        self.params = []
+        self.param_names = []
+
+        # Init hidden layers
+        if self.use_lstm:
+            self.left_layer = lstm_layer.LSTMLayer()
+            self.right_layer = lstm_layer.LSTMLayer()
+        else:
+            self.left_layer = recurrent_layer.RecurrentLayer()
+            self.right_layer = recurrent_layer.RecurrentLayer()
+        left_layer_dir = "%s/%s" % (target_dir, self.left_layer.__class__.__name__)
+        self.left_layer.load_from_files(left_layer_dir)
+        self.right_layer.share_layer(self.left_layer)
+
+        self.params += self.left_layer.params
+        self.param_names += self.left_layer.param_names
+
+        # Output layer
+        self.softmax_layer = layer.SoftmaxLayer()
+        softmax_target_dir = "%s/%s" % (target_dir, self.softmax_layer.__class__.__name__)
+        self.softmax_layer.load_from_files(softmax_target_dir)
+
+        self.params += self.softmax_layer.params
+        self.param_names += self.softmax_layer.param_names
+        logging.info("Finish loading %s from %s" % (self.__class__.__name__, target_dir))
 
     def cost(self, x, y, split_pos=None):
         """
@@ -321,13 +424,26 @@ def brnn_gradient_test():
                           max_int=voc_size, min_int=0, dim_unit=None)
     label_y = np.random.randint(low=0, high=20, size=x_row)
     word2vec = np.random.uniform(low=0, high=5, size=(voc_size, word_dim))
-    nntest = BRNN(x, label_y, word2vec, n_h, up_wordvec, use_bias,
-                 act_func, use_lstm=use_lstm)
+    nntest = BRNN()
+    nntest.init(x, label_y, word2vec, n_h, up_wordvec, use_bias,
+                act_func, use_lstm=use_lstm)
 
     # Gradient testing
     y = np.array([nntest.label_to_y[i] for i in label_y])
     gc = GradientChecker(epsilon=1e-05)
     gc.check_nn(nntest, x, y)
+
+    # Write and load test
+    nntest_bak = BRNN()
+    nntest.write_to_files("target_lstm")
+    nntest_bak.load_from_files("target_lstm")
+    print("After loading")
+    gc = GradientChecker(epsilon=1e-05)
+    gc.check_nn(nntest_bak, x, y)
+    print("Orignal output")
+    print(nntest.forward(x))
+    print("After loading output")
+    print(nntest_bak.forward(x))
 
 
 if __name__ == "__main__":

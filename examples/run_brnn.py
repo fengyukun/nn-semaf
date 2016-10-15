@@ -8,7 +8,6 @@ Brief:  Examples of running models
 # For python2
 from __future__ import print_function
 import sys
-import cPickle as pickle
 
 sys.path.append("../lib/")
 sys.path.append("../utils/")
@@ -130,10 +129,7 @@ def train_and_save_model():
     )
 
     # Write the model to file
-    fh = open(p["prediction_result"], "wb")
-    pickle.dump(rnn, fh)
-    fh.close()
-
+    # TO DO
 
 def run_fnn():
     p = OrderedDict([

@@ -277,7 +277,6 @@ class GeneralLayer(Layer):
                 raise Exception("%s is not a directory" % (target_dir,))
 
         # Write the attributes to file
-        logging.info("Begin writting %s layer to %s" % (self.__class__.__name__, target_dir))
         attributes_file = open("%s/attributes.txt" % target_dir, "w")
         print("%s %s %s %s" % (self.n_i, self.n_o, self.use_bias, self.tfloat),
               file=attributes_file)
@@ -287,7 +286,7 @@ class GeneralLayer(Layer):
             np.savez_compressed("%s/parameters.npz" % target_dir, w=self.w, b=self.b)
         else:
             np.savez_compressed("%s/parameters.npz" % target_dir, w=self.w)
-        logging.info("End writting %s layer to %s" % (self.__class__.__name__, target_dir))
+        logging.info("Finish writting %s layer to %s" % (self.__class__.__name__, target_dir))
 
     def load_from_files(self, target_dir):
         """Load files to recover one object of this class.
@@ -321,7 +320,7 @@ class GeneralLayer(Layer):
             self.b = paramters['b']
             self.params.append(self.b)
             self.param_names.append('b')
-        logging.info("End loading %s layer from %s" % (self.__class__.__name__, target_dir))
+        logging.info("Finish loading %s layer from %s" % (self.__class__.__name__, target_dir))
 
     def forward(self, x):
         """
@@ -589,9 +588,8 @@ class EmbeddingLayer(Layer):
         """
 
         # Write vectors to file
-        logging.info("Start writting %s layer to %s" % (self.__class__.__name__, target_file))
         np.savez_compressed(target_file, word2vec=self.word2vec)
-        logging.info("End writting %s layer to %s" % (self.__class__.__name__, target_file))
+        logging.info("Finish writting %s layer to %s" % (self.__class__.__name__, target_file))
 
     def load_from_files(self, target_file):
         """Write the word2vec to file
@@ -600,10 +598,9 @@ class EmbeddingLayer(Layer):
 
         """
         # Load parameters file
-        logging.info("Start loading %s layer from %s" % (self.__class__.__name__, target_file))
         paramters = np.load(target_file)
         self.word2vec = paramters['word2vec']
-        logging.info("End loading %s layer from %s" % (self.__class__.__name__, target_file))
+        logging.info("Finish loading %s layer from %s" % (self.__class__.__name__, target_file))
 
     def forward(self, x, input_opt='regular'):
         """

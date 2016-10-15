@@ -61,7 +61,6 @@ class LSTMLayer(Layer):
                 raise Exception("%s is not a directory" % (target_dir,))
 
         # Write the attributes to file
-        logging.info("Begin writting lstm layer to %s" % target_dir)
         attributes_file = open("%s/attributes.txt" % target_dir, "w")
         print("%s %s %s %s %s" % (self.n_i, self.n_o, self.act_func, self.use_bias, self.tfloat),
               file=attributes_file)
@@ -77,7 +76,7 @@ class LSTMLayer(Layer):
             np.savez_compressed("%s/parameters.npz" % target_dir, wxi=self.wxi, wxf=self.wxf,
                                 wxc=self.wxc, wxo=self.wxo, whi=self.whi, whc=self.whc,
                                 whf=self.whf, who=self.who)
-        logging.info("End writting lstm layer to %s" % target_dir)
+        logging.info("Finish writting %s layer to %s" % (self.__class__.__name__, target_dir))
 
     def load_from_files(self, target_dir):
         """Load files to recover one object of this class.
@@ -86,7 +85,6 @@ class LSTMLayer(Layer):
 
         """
 
-        logging.info("Begin loading lstm layer from %s" % target_dir)
         # Load attributes file
         attributes_file = open("%s/attributes.txt" % target_dir, "r")
         try:
@@ -150,7 +148,7 @@ class LSTMLayer(Layer):
         self.params.append(self.who)
         self.param_names.append("who")
 
-        logging.info("End loading lstm layer from %s" % target_dir)
+        logging.info("Finish loading %s layer from %s" % (self.__class__.__name__, target_dir))
 
     def share_layer(self, lstm_layer):
         """
