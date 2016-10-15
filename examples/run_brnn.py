@@ -8,6 +8,8 @@ Brief:  Examples of running models
 # For python2
 from __future__ import print_function
 import sys
+import cPickle as pickle
+
 sys.path.append("../lib/")
 sys.path.append("../utils/")
 sys.path.append("../models/")
@@ -37,15 +39,18 @@ def gen_print_info(field_names, values):
     return res
 
 
-def run_fnn():
+def train_and_save_model():
+    """Train and save the model to the file for later prediction.
+
+    """
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
-        ("word2vec_path", "../data/sample_word2vec.txt"),
-        #  ("word2vec_path", "../../word2vec/vector_model/glove.6B.300d.txt"),
+        #  ("word2vec_path", "../data/sample_word2vec.txt"),
+        ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
-        ("data_path", "../data/sample"),
-        #  ("data_path", "../data/chn_propbank"),
+        #  ("data_path", "../data/sample"),
+        ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -53,9 +58,9 @@ def run_fnn():
         ("use_padding", False),
         ("verb_index", True),
         # Validation part and train_part are from train_data_path
-        ("train_part", 0.7),
-        ("test_part", 0.2),
-        ("validation_part", 0.1),
+        ("train_part", 1.0),
+        ("test_part", 0.0),
+        ("validation_part", 0.0),
         # Minimum number of sentences of training data
         ("minimum_sent_num", 70), # ATTENTION TO THIS
         # Minimum frame of verb of training data
@@ -69,26 +74,22 @@ def run_fnn():
         ("max_epochs", 100),
         ("minibatch", 5),
         ("lr", 0.1),
-        ("random_vectors", True), # ATTENTION TO THIS
+        ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
-        ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../result/attention_results")
+        ("training_detail", True), # ATTENTION TO THIS
+        ("prediction_result", "../../results/nnfl/brnn")
     ])
-    result_file = "n_h%s_lr%s_%s" % (p["n_h"], p["lr"],
-                                os.path.basename(p["data_path"]))
 
-    if not os.path.isdir(p["prediction_results"]):
-        os.system("mkdir -p %s" % p["prediction_results"])
-    p["prediction_results"] += "/" + result_file
+    result_file = "brnn_n_h%s_lr%s_%s.model" % (p["n_h"], p["lr"],
+                                          os.path.basename(p["train_path"].rstrip('/')))
+    if not os.path.isdir(p["prediction_result"]):
+        os.system("mkdir -p %s" % p["prediction_result"])
+    p["prediction_result"] += "/" + result_file
 
-    #  if os.path.exists(p["prediction_results"]):
-        #  print("%s has existed, reindicate a result file" %
-              #  p["prediction_results"])
-        #  exit(0)
-
+    # Get the word vectors
     if p["random_vectors"]:
         vocab, invocab, word2vec = build_vocab(
-            corpus_dir=p["data_path"], oov=p["oov"],
+            corpus_dir=p["train_path"], oov=p["oov"],
             random_wordvec=True, dimension=300
         )
     else:
@@ -96,23 +97,122 @@ def run_fnn():
         vocab, invocab, word2vec = load_word_vectors(
             p["word2vec_path"], add_oov=True,oov=p["oov"]
         )
-    # Updating word vectors only happens for one verb
-    #   So when one verb is done, word vectors should recover
-    if p["up_wordvec"]:
-        word2vec_bak = np.array(word2vec, copy=True)
 
-    # Get data
+    # Get train data
     train_loader = DataLoader(
-        data_path=p["data_path"], vocab=vocab, oov=p["oov"],
+        data_path=p["train_path"], vocab=vocab, oov=p["oov"],
         left_win=p["left_win"], right_win=p["right_win"],
         use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
     )
-    train, test, validation = train_loader.get_data(
+    train, _, _ = train_loader.get_data(
         p["train_part"], p["test_part"], p["validation_part"],
-        sent_num_threshold=p["minimum_sent_num"],
+        sent_num_threshold=0,
         frame_threshold=p["minimum_frame"], 
         verb_index=p["verb_index"]
     )
+
+    train_file = train.keys()[0]
+    print(train_file)
+
+    # Train
+    rnn = BRNN(
+        x=train[train_file][0], label_y=train[train_file][1],
+        word2vec=word2vec, n_h=p["n_h"],
+        up_wordvec=p["up_wordvec"], use_bias=p["use_bias"],
+        act_func=p["act_func"], use_lstm=p["use_lstm"]
+    )
+    epoch = rnn.minibatch_train(
+        lr=p["lr"],
+        minibatch=p["minibatch"],
+        max_epochs=p["max_epochs"],
+        split_pos=train[train_file][2],
+        verbose=p["training_detail"]
+    )
+
+    # Write the model to file
+    fh = open(p["prediction_result"], "wb")
+    pickle.dump(rnn, fh)
+    fh.close()
+
+
+def run_fnn():
+    p = OrderedDict([
+        ("\nParameters for word vectors", ""),
+        #  ("word2vec_path", "../data/sample_word2vec.txt"),
+        ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
+        ("oov", "O_O_V"),
+        ("\nParameters for loading data", ""),
+        #  ("data_path", "../data/sample"),
+        ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train/"),
+        ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test/"),
+        ("left_win", -1),
+        ("right_win", -1),
+        ("use_verb", True),
+        ("lower", True),
+        ("use_padding", False),
+        ("verb_index", True),
+        # Minimum number of sentences of training data
+        ("minimum_sent_num", 70), # ATTENTION TO THIS
+        # Minimum frame of verb of training data
+        ("minimum_frame", 2), # ATTENTION TO THIS
+        ("\nParameters for rnn model", ""),
+        ("n_h", 45), # ATTENTION TO THIS
+        ("up_wordvec", False),
+        ("use_bias", True),
+        ("act_func", "tanh"),
+        ("use_lstm", True),
+        ("max_epochs", 100),
+        ("minibatch", 5),
+        ("lr", 0.1),
+        ("random_vectors", False), # ATTENTION TO THIS
+        ("\nOther parameters", ""),
+        ("training_detail", False), # ATTENTION TO THIS
+        ("prediction_results", "../results/")
+    ])
+    result_file = "n_h%s_lr%s_%s" % (p["n_h"], p["lr"],
+                                os.path.basename(p["train_path"]))
+
+    if not os.path.isdir(p["prediction_results"]):
+        os.system("mkdir -p %s" % p["prediction_results"])
+    p["prediction_results"] += "/" + result_file
+
+    if p["random_vectors"]:
+        vocab, invocab, word2vec = build_vocab(
+            corpus_dir=p["train_path"], oov=p["oov"],
+            random_wordvec=True, dimension=300
+        )
+    else:
+        # Get vocabulary and word vectors
+        vocab, invocab, word2vec = load_word_vectors(
+            p["word2vec_path"], add_oov=True,oov=p["oov"]
+        )
+
+    # Get train data
+    train_loader = DataLoader(
+        data_path=p["train_path"], vocab=vocab, oov=p["oov"],
+        left_win=p["left_win"], right_win=p["right_win"],
+        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
+    )
+    train, _, _ = train_loader.get_data(
+        1, 0.0, 0.0,
+        sent_num_threshold=0,
+        frame_threshold=p["minimum_frame"], 
+        verb_index=p["verb_index"]
+    )
+
+    # Get the test data
+    test_loader = DataLoader(
+        data_path=p["test_path"], vocab=vocab, oov=p["oov"],
+        left_win=p["left_win"], right_win=p["right_win"],
+        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
+    )
+    _, test, _ = test_loader.get_data(
+        0.0, 1.0, 0.0,
+        sent_num_threshold=0,
+        frame_threshold=0, 
+        verb_index=p["verb_index"]
+    )
+    validation = test
 
     field_names = [
         'precision', 'recall', 'f-score',
@@ -131,9 +231,6 @@ def run_fnn():
     verbs = train.keys()
     for verb in verbs:
         verb_counter += 1
-        # Recover the word vectors
-        if p["up_wordvec"] and verb_counter != 1:
-            word2vec = np.array(word2vec_bak, copy=True)
         # Build BRNN model for each verb
         rnn = BRNN(
             x=train[verb][0], label_y=train[verb][1],
@@ -151,12 +248,12 @@ def run_fnn():
         )
 
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
-        precision, recall, f_score = micro_average_f1(
+        precision, recall, f_score = bcubed_score(
             y_true=test[verb][1], y_pred=y_pred
         )
         valid_pred = rnn.predict(validation[verb][0],
                                  split_pos=validation[verb][2])
-        _, _, valid_f = micro_average_f1(
+        _, _, valid_f = bcubed_score(
             y_true=validation[verb][1], y_pred=valid_pred
         )
 
@@ -196,4 +293,5 @@ def run_fnn():
     fh_pr.close()
 
 if __name__ == "__main__":
-    run_fnn()
+    #  run_fnn()
+    train_and_save_model()

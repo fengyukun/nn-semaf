@@ -140,7 +140,7 @@ def zero_one_loss(y_true, y_pred):
             error += 1
     return error / len(y_true)
 
-def micro_average_f1(y_true, y_pred):
+def micro_average_score(y_true, y_pred):
     """Calculate the micro-average presion, recall and F-score for classification tasks.
 
     :y_true: 1d array like, the true labels
@@ -248,7 +248,7 @@ def test_micro_average_fscore():
     #  y_true = [0, 1, 0]
     #  y_pred = [2, 3, 4]
 
-    res = micro_average_f1(y_true, y_pred)
+    res = micro_average_score(y_true, y_pred)
     print(res)
 
 
