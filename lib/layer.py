@@ -5,7 +5,10 @@ Date:   2016-05-16
 Brief:  The library of layer
 """
 
+# For python2
+from __future__ import print_function
 import copy
+import os
 from inc import*
 from gradient_checker import GradientChecker
 
@@ -258,6 +261,67 @@ class GeneralLayer(Layer):
             self.b = np.zeros(shape=self.n_o, dtype=self.tfloat)
             self.params.append(self.b)
             self.param_names.append('b')
+
+    def write_to_files(self, target_dir):
+        """Write the attributes and the parameters to files
+
+        :target_dir: str, a directory where the attribute file and paramter file are. A directory
+        will be created if the target_dir does not exist.
+
+        """
+
+        try:
+            os.makedirs(target_dir)
+        except:
+            if not os.path.isdir(target_dir):
+                raise Exception("%s is not a directory" % (target_dir,))
+
+        # Write the attributes to file
+        logging.info("Begin writting %s layer to %s" % (self.__class__.__name__, target_dir))
+        attributes_file = open("%s/attributes.txt" % target_dir, "w")
+        print("%s %s %s %s" % (self.n_i, self.n_o, self.use_bias, self.tfloat),
+              file=attributes_file)
+        attributes_file.close()
+        # Write paramters to file
+        if self.use_bias:
+            np.savez_compressed("%s/parameters.npz" % target_dir, w=self.w, b=self.b)
+        else:
+            np.savez_compressed("%s/parameters.npz" % target_dir, w=self.w)
+        logging.info("End writting %s layer to %s" % (self.__class__.__name__, target_dir))
+
+    def load_from_files(self, target_dir):
+        """Load files to recover one object of this class.
+
+        :target_dir: str, a directory where the attribute file and paramter file are.
+
+        """
+
+        logging.info("Start loading %s layer from %s" % (self.__class__.__name__, target_dir))
+        # Load attributes file
+        attributes_file = open("%s/attributes.txt" % target_dir, "r")
+        try:
+            (n_i, n_o, use_bias, tfloat) = attributes_file.readline().strip().split(" ")
+            self.n_i = int(n_i)
+            self.n_o = int(n_o)
+            if use_bias == 'True':
+                self.use_bias = True
+            else:
+                self.use_bias = False
+            self.tfloat = tfloat
+        except:
+            raise Exception("%s/attributes.txt format error" % target_dir)
+        attributes_file.close()
+        
+        # Load parameters file
+        paramters = np.load("%s/parameters.npz" % target_dir)
+        self.w = paramters['w']
+        self.params = [self.w]
+        self.param_names = ['w']
+        if self.use_bias:
+            self.b = paramters['b']
+            self.params.append(self.b)
+            self.param_names.append('b')
+        logging.info("End loading %s layer from %s" % (self.__class__.__name__, target_dir))
 
     def forward(self, x):
         """
@@ -517,6 +581,30 @@ class EmbeddingLayer(Layer):
 
         self.word2vec = word2vec
 
+    def write_to_files(self, target_file):
+        """Write the word2vec to file
+
+        :target_file: str, the target file
+
+        """
+
+        # Write vectors to file
+        logging.info("Start writting %s layer to %s" % (self.__class__.__name__, target_file))
+        np.savez_compressed(target_file, word2vec=self.word2vec)
+        logging.info("End writting %s layer to %s" % (self.__class__.__name__, target_file))
+
+    def load_from_files(self, target_file):
+        """Write the word2vec to file
+
+        :target_file: str, the target file
+
+        """
+        # Load parameters file
+        logging.info("Start loading %s layer from %s" % (self.__class__.__name__, target_file))
+        paramters = np.load(target_file)
+        self.word2vec = paramters['word2vec']
+        logging.info("End loading %s layer from %s" % (self.__class__.__name__, target_file))
+
     def forward(self, x, input_opt='regular'):
         """
         Compute forward pass
@@ -722,6 +810,28 @@ def layer_test():
     embedding_layer.init_layer(word2vec)
     vectorized_x = embedding_layer.forward(embedding_x, input_opt='jagged')
     embedding_layer.backprop(vectorized_x)
+
+    # Write and load test
+    #  softmax_layer.write_to_files("softmax_layer_dir")
+    #  softmax_layer_bak = SoftmaxLayer()
+    #  softmax_layer_bak.load_from_files("softmax_layer_dir")
+    #  print("Checking the loaded layer")
+    #  gc.check_layer_params(softmax_layer_bak, x)
+    #  gc.check_layer_input(softmax_layer_bak, x)
+    #  print("Original layer output:")
+    #  print(softmax_layer.forward(x))
+    #  print("After loading layer output:")
+    #  print(softmax_layer_bak.forward(x))
+
+    # Write and load test embedding layer
+    #  embedding_layer.write_to_files("embedding_out.npz")
+    #  embedding_layer_bak = EmbeddingLayer()
+    #  embedding_layer_bak.load_from_files("embedding_out.npz")
+    #  print("Original embedding layer output:")
+    #  print(vectorized_x)
+    #  print("After loading layer output:")
+    #  print(embedding_layer_bak.forward(embedding_x, input_opt='jagged'))
+
 
 
 if __name__ == "__main__":

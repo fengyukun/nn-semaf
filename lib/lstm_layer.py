@@ -63,7 +63,8 @@ class LSTMLayer(Layer):
         # Write the attributes to file
         logging.info("Begin writting lstm layer to %s" % target_dir)
         attributes_file = open("%s/attributes.txt" % target_dir, "w")
-        print("%s %s %s %s %s" % (self.n_i, self.n_o, self.act_func, self.use_bias, self.tfloat), file=attributes_file)
+        print("%s %s %s %s %s" % (self.n_i, self.n_o, self.act_func, self.use_bias, self.tfloat),
+              file=attributes_file)
         attributes_file.close()
 
         # Write paramters to file
@@ -93,7 +94,10 @@ class LSTMLayer(Layer):
             self.n_i = int(n_i)
             self.n_o = int(n_o)
             self.act_func = act_func
-            self.use_bias = bool(use_bias)
+            if use_bias == 'True':
+                self.use_bias = True
+            else:
+                self.use_bias = False
             self.tfloat = tfloat
         except:
             raise Exception("%s/attributes.txt format error" % target_dir)

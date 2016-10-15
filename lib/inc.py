@@ -7,6 +7,8 @@ Brief:  Common headers
 
 # Activate automatic float divison for python2.
 from __future__ import division
+# For python2
+from __future__ import print_function
 import numpy as np
 import logging
 
