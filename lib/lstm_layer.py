@@ -5,7 +5,10 @@ Date:  2016-05-26
 Brief:  The implementation of long short-term memory (LSTM) layer
 """
 
+# For python2
+from __future__ import print_function
 import copy
+import os
 from inc import*
 from gradient_checker import GradientChecker
 from layer import Layer
@@ -43,6 +46,108 @@ class LSTMLayer(Layer):
         self.tfloat = tfloat
         self.init_params()
 
+    def write_to_files(self, target_dir):
+        """Write the attributes and the parameters to files
+
+        :target_dir: str, a directory where the attribute file and paramter file are. A directory
+        will be created if the target_dir does not exist.
+
+        """
+
+        try:
+            os.makedirs(target_dir)
+        except:
+            if not os.path.isdir(target_dir):
+                raise Exception("%s is not a directory" % (target_dir,))
+
+        # Write the attributes to file
+        logging.info("Begin writting lstm layer to %s" % target_dir)
+        attributes_file = open("%s/attributes.txt" % target_dir, "w")
+        print("%s %s %s %s %s" % (self.n_i, self.n_o, self.act_func, self.use_bias, self.tfloat), file=attributes_file)
+        attributes_file.close()
+
+        # Write paramters to file
+        if self.use_bias:
+            np.savez_compressed("%s/parameters.npz" % target_dir, wxi=self.wxi, wxf=self.wxf,
+                                wxc=self.wxc, wxo=self.wxo, whi=self.whi, whc=self.whc,
+                                whf=self.whf, who=self.who, ib=self.ib, fb=self.fb, cb=self.cb,
+                                ob=self.ob)
+        else:
+            np.savez_compressed("%s/parameters.npz" % target_dir, wxi=self.wxi, wxf=self.wxf,
+                                wxc=self.wxc, wxo=self.wxo, whi=self.whi, whc=self.whc,
+                                whf=self.whf, who=self.who)
+        logging.info("End writting lstm layer to %s" % target_dir)
+
+    def load_from_files(self, target_dir):
+        """Load files to recover one object of this class.
+
+        :target_dir: str, a directory where the attribute file and paramter file are.
+
+        """
+
+        logging.info("Begin loading lstm layer from %s" % target_dir)
+        # Load attributes file
+        attributes_file = open("%s/attributes.txt" % target_dir, "r")
+        try:
+            (n_i, n_o, act_func, use_bias, tfloat) = attributes_file.readline().strip().split(" ")
+            self.n_i = int(n_i)
+            self.n_o = int(n_o)
+            self.act_func = act_func
+            self.use_bias = bool(use_bias)
+            self.tfloat = tfloat
+        except:
+            raise Exception("%s/attributes.txt format error" % target_dir)
+        attributes_file.close()
+        
+        # Load parameters file
+        paramters = np.load("%s/parameters.npz" % target_dir)
+        self.wxi = paramters['wxi']
+        self.wxf = paramters['wxf']
+        self.wxc = paramters['wxc']
+        self.wxo = paramters['wxo']
+        self.whi = paramters['whi']
+        self.whc = paramters['whc']
+        self.whf = paramters['whf']
+        self.who = paramters['who']
+        if self.use_bias:
+            self.ib = paramters['ib']
+            self.fb = paramters['fb']
+            self.cb = paramters['cb']
+            self.ob = paramters['ob']
+
+        self.params = []
+        self.param_names = []
+        self.params.append(self.wxi)
+        self.param_names.append("wxi")
+        if self.use_bias:
+            self.params.append(self.ib)
+            self.param_names.append("ib")
+        self.params.append(self.wxf)
+        self.param_names.append("wxf")
+        if self.use_bias:
+            self.params.append(self.fb)
+            self.param_names.append("fb")
+        self.params.append(self.wxc)
+        self.param_names.append("wxc")
+        if self.use_bias:
+            self.params.append(self.cb)
+            self.param_names.append("cb")
+        self.params.append(self.wxo)
+        self.param_names.append("wxo")
+        if self.use_bias:
+            self.params.append(self.ob)
+            self.param_names.append("ob")
+        self.params.append(self.whi)
+        self.param_names.append("whi")
+        self.params.append(self.whc)
+        self.param_names.append("whc")
+        self.params.append(self.whf)
+        self.param_names.append("whf")
+        self.params.append(self.who)
+        self.param_names.append("who")
+
+        logging.info("End loading lstm layer from %s" % target_dir)
+
     def share_layer(self, lstm_layer):
         """
         Sharing layer with given layer. Parameters are shared with two layers.
@@ -73,6 +178,7 @@ class LSTMLayer(Layer):
             self.fb = lstm_layer.fb
             self.cb = lstm_layer.cb
             self.ob = lstm_layer.ob
+
 
     def init_params(self):
         """
@@ -567,7 +673,6 @@ class LSTMLayer(Layer):
 
         return gop
 
-
 def layer_test():
     n_i = 3
     n_o = 5
@@ -596,6 +701,21 @@ def layer_test():
     gc.check_jagged_input(lstm_layer, x)
     check_params = None
     gc.check_layer_params(lstm_layer, x, check_params)
+
+    # Write and load test
+    #  lstm_layer.write_to_files("lstm_layer_dir")
+    #  lstm_layer_bak = LSTMLayer()
+    #  lstm_layer_bak.load_from_files("lstm_layer_dir")
+    #  print("After writting and loading")
+    #  print(lstm_layer.param_names)
+    #  gc = GradientChecker(epsilon=1e-05)
+    #  gc.check_jagged_input(lstm_layer, x)
+    #  check_params = None
+    #  gc.check_layer_params(lstm_layer, x, check_params)
+    #  print("orginal output:")
+    #  print(lstm_layer.forward(x)[0][0:2])
+    #  print("after loading output:")
+    #  print(lstm_layer_bak.forward(x)[0][0:2])
 
 if __name__ == "__main__":
     layer_test()
