@@ -44,12 +44,13 @@ def train_and_save_model():
     """
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
+        ("word2vec_path", "../data/sample_word2vec.txt"),
+        #  ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
         ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train/"),
+        ("train_path", "../data/sample/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -76,14 +77,9 @@ def train_and_save_model():
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
-        ("prediction_result", "../../results/nnfl/brnn")
+        #  ("result_dir", "../../results/nnfl/trained_models/test.model")
+        ("result_dir", "test.model")
     ])
-
-    result_file = "brnn_n_h%s_lr%s_%s.model" % (p["n_h"], p["lr"],
-                                          os.path.basename(p["train_path"].rstrip('/')))
-    if not os.path.isdir(p["prediction_result"]):
-        os.system("mkdir -p %s" % p["prediction_result"])
-    p["prediction_result"] += "/" + result_file
 
     # Get the word vectors
     if p["random_vectors"]:
@@ -111,10 +107,10 @@ def train_and_save_model():
     )
 
     train_file = train.keys()[0]
-    print(train_file)
 
     # Train
-    rnn = BRNN(
+    rnn = BRNN()
+    rnn.init(
         x=train[train_file][0], label_y=train[train_file][1],
         word2vec=word2vec, n_h=p["n_h"],
         up_wordvec=p["up_wordvec"], use_bias=p["use_bias"],
@@ -123,15 +119,16 @@ def train_and_save_model():
     epoch = rnn.minibatch_train(
         lr=p["lr"],
         minibatch=p["minibatch"],
-        max_epochs=p["max_epochs"],
+        #  max_epochs=p["max_epochs"],
+        max_epochs=1,
         split_pos=train[train_file][2],
         verbose=p["training_detail"]
     )
 
     # Write the model to file
-    # TO DO
+    rnn.write_to_files(p["result_dir"])
 
-def run_fnn():
+def train_and_test():
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
         #  ("word2vec_path", "../data/sample_word2vec.txt"),
@@ -289,5 +286,5 @@ def run_fnn():
     fh_pr.close()
 
 if __name__ == "__main__":
-    #  run_fnn()
+    #  train_and_test()
     train_and_save_model()
