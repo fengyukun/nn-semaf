@@ -5,6 +5,8 @@ Date:   2016/03/22
 Brief:  Some commonly used functions in other modules
 """
 
+# For python2
+from __future__ import print_function
 import os
 import string
 import numpy as np
@@ -210,6 +212,45 @@ def load_word_vectors(vector_path, add_oov=False, oov="O_O_V"):
                  % (add_oov, str(word2vec.shape)))
 
     return [vocab, invocab, word2vec]
+
+def write_vocab_to_file(file_path, vocab, oov_tag=None):
+    """Write vocabularies to a given file
+
+    :file_path: str, the file path to write
+    :vocab: dict, key is word and value is index.
+    :oov_tag: str or None, out-of-vocabulary tag.
+
+    """
+
+    out_file = open(file_path, "w")
+    print(str(oov_tag), file=out_file)
+    for word, index in vocab.items():
+        print("%s,%s" % (word, index), file=out_file)
+    out_file.close()
+
+def load_vocab_from_file(file_path):
+    """Load vocabularies from a given file
+
+    :file_path: str, the file path to load
+    :returns: [vocab, oov_tag]. The key of dict is word and value of dict is index.
+
+    """
+    load_file = open(file_path, "r")
+    vocab = {}
+    oov_tag = load_file.readline().strip()
+    if oov_tag == 'None':
+        oov_tag = None
+    for line in load_file:
+        line = line.strip()
+        if line == '':
+            continue
+        try:
+            word, index = line.split(",")
+        except:
+            raise Exception("%s format error" % file_path)
+        vocab[word] = index
+    load_file.close()
+    return [vocab, oov_tag]
 
 def build_vocab(corpus_dir, oov="O_O_V", random_wordvec=False, dimension=300):
     """Build vocabulary from given corpus
