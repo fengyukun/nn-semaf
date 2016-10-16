@@ -78,7 +78,8 @@ def train_and_save_model():
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
         #  ("result_dir", "../../results/nnfl/trained_models/test.model")
-        ("result_dir", "test.model")
+        ("result_dir", "test.model"),
+        ("vocab_path", "test.model/vocab")
     ])
 
     # Get the word vectors
@@ -90,7 +91,7 @@ def train_and_save_model():
     else:
         # Get vocabulary and word vectors
         vocab, invocab, word2vec = load_word_vectors(
-            p["word2vec_path"], add_oov=True,oov=p["oov"]
+            p["word2vec_path"], add_oov=True, oov=p["oov"]
         )
 
     # Get train data
@@ -109,14 +110,14 @@ def train_and_save_model():
     train_file = train.keys()[0]
 
     # Train
-    rnn = BRNN()
-    rnn.init(
+    nn = BRNN()
+    nn.init(
         x=train[train_file][0], label_y=train[train_file][1],
         word2vec=word2vec, n_h=p["n_h"],
         up_wordvec=p["up_wordvec"], use_bias=p["use_bias"],
         act_func=p["act_func"], use_lstm=p["use_lstm"]
     )
-    epoch = rnn.minibatch_train(
+    epoch = nn.minibatch_train(
         lr=p["lr"],
         minibatch=p["minibatch"],
         #  max_epochs=p["max_epochs"],
@@ -126,7 +127,81 @@ def train_and_save_model():
     )
 
     # Write the model to file
-    rnn.write_to_files(p["result_dir"])
+    nn.write_to_files(p["result_dir"])
+    # Write the vocab to file
+    write_vocab_to_file(p["vocab_path"], vocab, oov_tag=p["oov"])
+
+
+def load_and_test():
+    p = OrderedDict([
+        ("test_path", "../data/sample"),
+        #  ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test/"),
+        ("left_win", -1),
+        ("right_win", -1),
+        ("use_verb", True),
+        ("lower", True),
+        ("use_padding", False),
+        ("verb_index", True),
+        # Minimum number of sentences of training data
+        ("minimum_sent_num", 70), # ATTENTION TO THIS
+        # Minimum frame of verb of training data
+        ("minimum_frame", 2), # ATTENTION TO THIS
+        ("model_path", "test.model"),
+        ("vocab_path", "test.model/vocab")
+    ])
+
+    # Load the vocab
+    vocab, oov_tag = load_vocab_from_file(p["vocab_path"])
+    # Get the test data
+    test_loader = DataLoader(
+        data_path=p["test_path"], vocab=vocab, oov=oov_tag,
+        left_win=p["left_win"], right_win=p["right_win"],
+        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
+    )
+    _, test, _ = test_loader.get_data(
+        0.0, 1.0, 0.0,
+        sent_num_threshold=0,
+        frame_threshold=0, 
+        verb_index=p["verb_index"]
+    )
+
+    # Load model
+    nn = BRNN()
+    nn.load_from_files(p["model_path"])
+
+    field_names = [
+        'precision', 'recall', 'f-score',
+        "sentence number (test data)",
+        "frame number(test data)",
+    ]
+
+    # Average statistics over all verbs
+    scores_overall = np.zeros(len(field_names), dtype=FLOAT)
+    verb_counter = 0
+    verbs = test.keys()
+    for verb in verbs:
+        verb_counter += 1
+        y_pred = nn.predict(test[verb][0], split_pos=test[verb][2])
+        precision, recall, f_score = bcubed_score(
+            y_true=test[verb][1], y_pred=y_pred
+        )
+
+        scores = [
+            precision, recall, f_score,
+            len(test[verb][1]),
+            len(set(test[verb][1])),
+        ]
+        scores_overall += scores
+        print("current verb:%s, scores are:" % verb)
+        print(gen_print_info(field_names, scores))
+        print("current completeness:%d/%d, average scores over %d verbs are:"
+              % (verb_counter, len(verbs), verb_counter))
+        print(gen_print_info(field_names, scores_overall / verb_counter))
+
+    print(gen_params_info(p))
+    print("End of training and testing, the average "
+          "infomation over %d verbs are:" % len(verbs))
+    print(gen_print_info(field_names, scores_overall / len(verbs)))
 
 def train_and_test():
     p = OrderedDict([
@@ -287,4 +362,5 @@ def train_and_test():
 
 if __name__ == "__main__":
     #  train_and_test()
-    train_and_save_model()
+    #  train_and_save_model()
+    load_and_test()
