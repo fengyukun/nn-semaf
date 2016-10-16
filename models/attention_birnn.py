@@ -5,6 +5,9 @@ Date: 2016-08-16
 Brief:  The implementation of Attention-based Bidirectional Recurrent Neural Network (ABiRNN)
 """
 
+# For python2
+from __future__ import print_function
+import os
 import sys
 sys.path.append("../lib/")
 sys.path.append("../utils/")
@@ -22,9 +25,9 @@ class ABiRNN(object):
     """
     Attention-based Bidirectional Recurrent Neural Network (BRNN) class
     """
-    def __init__(self, x, label_y, word2vec, n_h, up_wordvec=False,
-                 use_bias=True, act_func='tanh',
-                 use_lstm=True, norm_func='softmax', global_independent=False):
+    def init(self, x, label_y, word2vec, n_h, up_wordvec=False,
+             use_bias=True, act_func='tanh',
+             use_lstm=True, norm_func='softmax', global_independent=False):
         """
         Init ABRiNN
         x: numpy.ndarray, 2d jagged arry
@@ -105,6 +108,105 @@ class ABiRNN(object):
                                  use_bias=self.use_bias)
         self.params += self.softmax_layer.params
         self.param_names += self.softmax_layer.param_names
+
+    def write_to_files(self, target_dir):
+        """Write the attributes and the parameters to files
+
+        :target_dir: str, a directory where the attribute file and paramter file are. A directory
+        will be created if the target_dir does not exist.
+
+        """
+
+        try:
+            os.makedirs(target_dir)
+        except:
+            if not os.path.isdir(target_dir):
+                raise Exception("%s is not a directory" % (target_dir,))
+
+        # Write the attributes to file
+        attributes_file = open("%s/attributes.txt" % target_dir, "w")
+        print("%s %s %s %s %s %s %s %s %s" % (self.n_i, self.n_o, self.act_func, self.use_bias,
+              self.use_lstm, self.n_h, self.up_wordvec, self.norm_func, self.global_independent),
+              file=attributes_file)
+        y_to_label = ",".join(['%s:%s' % (k, v) for k, v in self.y_to_label.items()]) 
+        print(y_to_label, file=attributes_file)
+        attributes_file.close()
+
+        # Write paramters to file
+        self.embedding_layer.write_to_files("%s/embedding_out.npz" % (target_dir,))
+        bilayer_dir = "%s/%s" % (target_dir, self.bir_layer.__class__.__name__)
+        self.bir_layer.write_to_files(bilayer_dir)
+        softmax_target_dir = "%s/%s" % (target_dir, self.softmax_layer.__class__.__name__)
+        self.softmax_layer.write_to_files(softmax_target_dir)
+        logging.info("Finish writting %s layer to %s" % (self.__class__.__name__, target_dir))
+
+    def load_from_files(self, target_dir):
+        """Load files to recover one object of this class.
+
+        :target_dir: str, a directory where the attribute file and paramter file are.
+
+        """
+
+        # Load attributes file
+        attributes_file = open("%s/attributes.txt" % target_dir, "r")
+        try:
+            (n_i, n_o, act_func, use_bias, use_lstm, n_h, up_wordvec,
+             norm_func, global_independent) = (attributes_file.readline().strip().split(" "))
+            self.n_i = int(n_i)
+            self.n_o = int(n_o)
+            self.act_func = act_func
+            if use_bias == 'True':
+                self.use_bias = True
+            else:
+                self.use_bias = False
+            if use_lstm == 'True':
+                self.use_lstm = True
+            else:
+                self.use_lstm = False
+            self.n_h = int(n_h)
+            if up_wordvec == 'True':
+                self.up_wordvec = True
+            else:
+                self.up_wordvec = False
+            self.norm_func = norm_func
+            if global_independent == 'True':
+                self.global_independent = True
+            else:
+                self.global_independent = False
+            y_to_label = attributes_file.readline().strip().split(',')
+            self.y_to_label = {}
+            for key_value in y_to_label:
+                key, value = key_value.split(":")
+                self.y_to_label[int(key)] = value
+        except:
+            raise Exception("%s/attributes.txt format error" % target_dir)
+        attributes_file.close()
+        
+        # Load parameters file
+
+        self.embedding_layer = layer.EmbeddingLayer()
+        self.embedding_layer.load_from_files("%s/embedding_out.npz" % (target_dir,))
+
+        self.layers = []
+        self.params = []
+        self.param_names = []
+
+        self.bir_layer = birecurrent_layer.BiRecurrentLayer()
+        bilayer_dir = "%s/%s" % (target_dir, self.bir_layer.__class__.__name__)
+        self.bir_layer.load_from_files(bilayer_dir)
+        self.params += self.bir_layer.params
+        self.param_names += self.bir_layer.param_names
+
+        # Init attention layer
+        self.attention_layer = AttentionLayer(norm_func=self.norm_func)
+
+        self.softmax_layer = layer.SoftmaxLayer()
+        softmax_target_dir = "%s/%s" % (target_dir, self.softmax_layer.__class__.__name__)
+        self.softmax_layer.load_from_files(softmax_target_dir)
+        self.params += self.softmax_layer.params
+        self.param_names += self.softmax_layer.param_names
+
+        logging.info("Finish loading %s from %s" % (self.__class__.__name__, target_dir))
 
     def cost(self, x, y, split_pos=None):
         """
@@ -328,15 +430,27 @@ def brnn_gradient_test():
                           max_int=voc_size, min_int=0, dim_unit=None)
     label_y = np.random.randint(low=0, high=20, size=x_row)
     word2vec = np.random.uniform(low=0, high=5, size=(voc_size, word_dim))
-    nntest = ABiRNN(x, label_y, word2vec, n_h, up_wordvec, use_bias,
-                    act_func, use_lstm=use_lstm, norm_func='softmax',
-                    global_independent=True)
+    nntest = ABiRNN()
+    nntest.init(x, label_y, word2vec, n_h, up_wordvec, use_bias,
+                act_func, use_lstm=use_lstm, norm_func='softmax',
+                global_independent=True)
 
     # Gradient testing
     y = np.array([nntest.label_to_y[i] for i in label_y])
     gc = GradientChecker(epsilon=1e-05)
     gc.check_nn(nntest, x, y)
 
+    # Write and load test
+    nntest_bak = ABiRNN()
+    nntest.write_to_files("abirnn_dir")
+    nntest_bak.load_from_files("abirnn_dir")
+    print("After loading")
+    gc = GradientChecker(epsilon=1e-05)
+    gc.check_nn(nntest_bak, x, y)
+    print("Orignal output")
+    print(nntest.forward(x))
+    print("After loading output")
+    print(nntest_bak.forward(x))
 
 if __name__ == "__main__":
     #  brnn_test()

@@ -5,6 +5,9 @@ Date: 2016-06-10
 Brief:  The implementation of Recurrent Neural Network (RNN)
 """
 
+# For python2
+from __future__ import print_function
+import os
 import sys
 sys.path.append("../lib/")
 sys.path.append("../utils/")
@@ -20,7 +23,7 @@ class RNN(object):
     """
     Recurrent Neural Network (RNN) class
     """
-    def __init__(self, x, label_y, word2vec, n_h, up_wordvec=False,
+    def init(self, x, label_y, word2vec, n_h, up_wordvec=False,
                  use_bias=True, act_func='tanh', use_lstm=False):
         """
         Init RNN
@@ -92,6 +95,99 @@ class RNN(object):
         self.params += softmax_layer.params
         self.param_names += softmax_layer.param_names
         self.layers.append(softmax_layer)
+
+    def write_to_files(self, target_dir):
+        """Write the attributes and the parameters to files
+
+        :target_dir: str, a directory where the attribute file and paramter file are. A directory
+        will be created if the target_dir does not exist.
+
+        """
+
+        try:
+            os.makedirs(target_dir)
+        except:
+            if not os.path.isdir(target_dir):
+                raise Exception("%s is not a directory" % (target_dir,))
+
+        # Write the attributes to file
+        attributes_file = open("%s/attributes.txt" % target_dir, "w")
+        print("%s %s %s %s %s %s %s" % (self.n_i, self.n_o, self.act_func, self.use_bias,
+              self.use_lstm, self.n_h, self.up_wordvec), file=attributes_file)
+        y_to_label = ",".join(['%s:%s' % (k, v) for k, v in self.y_to_label.items()]) 
+        print(y_to_label, file=attributes_file)
+        layer_names = [neural_layer.__class__.__name__ for neural_layer in self.layers]
+        print(" ".join(layer_names), file=attributes_file)
+        attributes_file.close()
+
+        # Write paramters to file
+        self.embedding_layer.write_to_files("%s/embedding_out.npz" % (target_dir,))
+        for neural_layer in self.layers:
+            layer_target_dir = "%s/%s" % (target_dir, neural_layer.__class__.__name__)
+            neural_layer.write_to_files(layer_target_dir)
+            
+        logging.info("Finish writting %s layer to %s" % (self.__class__.__name__, target_dir))
+
+    def load_from_files(self, target_dir):
+        """Load files to recover one object of this class.
+
+        :target_dir: str, a directory where the attribute file and paramter file are.
+
+        """
+
+        # Load attributes file
+        attributes_file = open("%s/attributes.txt" % target_dir, "r")
+        try:
+            (n_i, n_o, act_func, use_bias, use_lstm, n_h, up_wordvec) = (
+                attributes_file.readline().strip().split(" ")
+            )
+            self.n_i = int(n_i)
+            self.n_o = int(n_o)
+            self.act_func = act_func
+            if use_bias == 'True':
+                self.use_bias = True
+            else:
+                self.use_bias = False
+            if use_lstm == 'True':
+                self.use_lstm = True
+            else:
+                self.use_lstm = False
+            self.n_h = int(n_h)
+            if up_wordvec == 'True':
+                self.up_wordvec = True
+            else:
+                self.up_wordvec = False
+            y_to_label = attributes_file.readline().strip().split(',')
+            self.y_to_label = {}
+            for key_value in y_to_label:
+                key, value = key_value.split(":")
+                self.y_to_label[int(key)] = value
+
+            layer_names = attributes_file.readline().strip().split(" ")
+        except:
+            raise Exception("%s/attributes.txt format error" % target_dir)
+        attributes_file.close()
+        
+        # Load parameters file
+
+        self.embedding_layer = layer.EmbeddingLayer()
+        self.embedding_layer.load_from_files("%s/embedding_out.npz" % (target_dir,))
+
+        self.layers = []
+        self.params = []
+        self.param_names = []
+        for layer_name in layer_names:
+            if layer_name == 'LSTMLayer':
+                neural_layer = lstm_layer.LSTMLayer()
+            elif layer_name == 'SoftmaxLayer':
+                neural_layer = layer.SoftmaxLayer()
+            layer_target_dir = "%s/%s" % (target_dir, neural_layer.__class__.__name__)
+            neural_layer.load_from_files(layer_target_dir)
+            self.layers.append(neural_layer)
+            self.params += neural_layer.params
+            self.param_names += neural_layer.param_names
+
+        logging.info("Finish loading %s from %s" % (self.__class__.__name__, target_dir))
 
     def cost(self, x, y):
         """
@@ -232,15 +328,16 @@ def rnn_test():
     up_wordvec = False
     use_bias = True
     act_func = 'tanh'
-    use_lstm = False
+    use_lstm = True
     x_row = 5
     voc_size = 20
     word_dim = 3
     x = np.random.randint(low=0, high=voc_size, size=(x_row, x_col))
     label_y = np.random.randint(low=0, high=20, size=x_row)
     word2vec = np.random.uniform(low=0, high=5, size=(voc_size, word_dim))
-    nntest = RNN(x, label_y, word2vec, n_h, up_wordvec, use_bias,
-                 act_func, use_lstm=use_lstm)
+    nntest = RNN()
+    nntest.init(x, label_y, word2vec, n_h, up_wordvec, use_bias,
+                act_func, use_lstm=use_lstm)
 
     # Training
     lr = 0.015
@@ -253,6 +350,17 @@ def rnn_test():
     gc = GradientChecker(epsilon=1e-05)
     gc.check_nn(nntest, x, y)
 
+    # Write and load test
+    nntest_bak = RNN()
+    nntest.write_to_files("lstm_save")
+    nntest_bak.load_from_files("lstm_save")
+    print("After loading")
+    gc = GradientChecker(epsilon=1e-05)
+    gc.check_nn(nntest_bak, x, y)
+    print("Orignal output")
+    print(nntest.forward(x))
+    print("After loading output")
+    print(nntest_bak.forward(x))
 
 if __name__ == "__main__":
     rnn_test()

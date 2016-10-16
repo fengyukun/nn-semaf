@@ -5,6 +5,9 @@ Date:  2016-08-17
 Brief:  The implementation of bidirectional recurrent layer
 """
 
+# For python2
+from __future__ import print_function
+import os
 import copy
 from inc import*
 from gradient_checker import GradientChecker
@@ -54,8 +57,8 @@ class BiRecurrentLayer(Layer):
             self.upper_layer = recurrent_layer.RecurrentLayer()
             self.lower_layer = recurrent_layer.RecurrentLayer()
         self.upper_layer.init_layer(self.n_i, self.n_o,
-                                   act_func=self.act_func,
-                                   use_bias=self.use_bias)
+                                    act_func=self.act_func,
+                                    use_bias=self.use_bias)
         self.lower_layer.share_layer(self.upper_layer)
         self.init_params()
 
@@ -67,12 +70,6 @@ class BiRecurrentLayer(Layer):
         self.param_names = self.upper_layer.param_names
 
         if self.use_lstm:
-            self.n_i = self.upper_layer.n_i
-            self.n_o = self.upper_layer.n_o
-            self.act_func = self.upper_layer.act_func
-            self.use_bias = self.upper_layer.use_bias
-            self.tfloat = self.upper_layer.tfloat
-
             self.wxi = self.upper_layer.wxi
             self.wxf = self.upper_layer.wxf
             self.wxc = self.upper_layer.wxc
@@ -88,16 +85,80 @@ class BiRecurrentLayer(Layer):
                 self.cb = self.upper_layer.cb
                 self.ob = self.upper_layer.ob
         else:
-            self.n_i = self.upper_layer.n_i
-            self.n_o = self.upper_layer.n_o
-            self.act_func = self.upper_layer.act_func
-            self.use_bias = self.upper_layer.use_bias
-            self.tfloat = self.upper_layer.tfloat
-
             self.w = self.upper_layer.w
             self.rw = self.upper_layer.rw
             if self.use_bias:
                 self.b = self.upper_layer.b
+
+    def write_to_files(self, target_dir):
+        """Write the attributes and the parameters to files
+
+        :target_dir: str, a directory where the attribute file and paramter file are. A directory
+        will be created if the target_dir does not exist.
+
+        """
+
+        try:
+            os.makedirs(target_dir)
+        except:
+            if not os.path.isdir(target_dir):
+                raise Exception("%s is not a directory" % (target_dir,))
+
+        # Write the attributes to file
+        attributes_file = open("%s/attributes.txt" % target_dir, "w")
+        attributes = "%s %s %s %s %s %s" % (self.n_i, self.n_o, self.act_func, self.use_bias,
+                     self.use_lstm, self.tfloat)
+        print(attributes, file=attributes_file)
+        attributes_file.close()
+
+        # Write paramters to file
+        upper_layer_dir = "%s/%s" % (target_dir, self.upper_layer.__class__.__name__)
+        self.upper_layer.write_to_files(upper_layer_dir)
+
+        logging.info("Finish writting %s layer to %s" % (self.__class__.__name__, target_dir))
+
+    def load_from_files(self, target_dir):
+        """Load files to recover one object of this class.
+
+        :target_dir: str, a directory where the attribute file and paramter file are.
+
+        """
+
+        # Load attributes file
+        attributes_file = open("%s/attributes.txt" % target_dir, "r")
+        #  try:
+        (n_i, n_o, act_func, use_bias, use_lstm, tfloat) = (
+            attributes_file.readline().strip().split(" ")
+        )
+        self.n_i = int(n_i)
+        self.n_o = int(n_o)
+        self.act_func = act_func
+        if use_bias == 'True':
+            self.use_bias = True
+        else:
+            self.use_bias = False
+        if use_lstm == 'True':
+            self.use_lstm = True
+        else:
+            self.use_lstm = False
+        self.tfloat = tfloat
+        #  except:
+            #  raise Exception("%s/attributes.txt format error" % target_dir)
+        attributes_file.close()
+        
+        # Load parameters file
+        if self.use_lstm:
+            self.upper_layer = lstm_layer.LSTMLayer()
+            self.lower_layer = lstm_layer.LSTMLayer()
+        else:
+            self.upper_layer = recurrent_layer.RecurrentLayer()
+            self.lower_layer = recurrent_layer.RecurrentLayer()
+        upper_layer_dir = "%s/%s" % (target_dir, self.upper_layer.__class__.__name__)
+        self.upper_layer.load_from_files(upper_layer_dir)
+        self.lower_layer.share_layer(self.upper_layer)
+        self.init_params()
+
+        logging.info("Finish loading %s from %s" % (self.__class__.__name__, target_dir))
 
     def share_layer(self, inited_layer):
         """
@@ -222,6 +283,21 @@ def layer_test():
     gc.check_jagged_input(birecurrent_layer, x)
     check_params = None
     gc.check_layer_params(birecurrent_layer, x, check_params)
+
+    # Write and load test
+    birecurrent_layer.write_to_files("birecurrent_layer_dir")
+    bilayer_bak = BiRecurrentLayer()
+    bilayer_bak.load_from_files("birecurrent_layer_dir")
+    print("After writting and loading")
+    print(birecurrent_layer.param_names)
+    gc = GradientChecker(epsilon=1e-05)
+    gc.check_jagged_input(birecurrent_layer, x)
+    check_params = None
+    gc.check_layer_params(birecurrent_layer, x, check_params)
+    print("orginal output:")
+    print(birecurrent_layer.forward(x)[0][0:2])
+    print("after loading output:")
+    print(bilayer_bak.forward(x)[0][0:2])
 
 if __name__ == "__main__":
     layer_test()
