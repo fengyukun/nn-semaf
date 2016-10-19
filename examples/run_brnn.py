@@ -44,13 +44,12 @@ def train_and_save_model():
     """
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
-        ("word2vec_path", "../data/sample_word2vec.txt"),
-        #  ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
+        #  ("word2vec_path", "../data/sample_word2vec.txt"),
+        ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train/"),
-        ("train_path", "../data/sample/"),
+        ("train_path", "../../data/corpus/wsj_framnet"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -66,7 +65,7 @@ def train_and_save_model():
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
-        ("n_h", 45), # ATTENTION TO THIS
+        ("n_h", 100), # ATTENTION TO THIS
         ("up_wordvec", False),
         ("use_bias", True),
         ("act_func", "tanh"),
@@ -77,9 +76,10 @@ def train_and_save_model():
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
-        #  ("result_dir", "../../results/nnfl/trained_models/test.model")
-        ("result_dir", "test.model"),
-        ("vocab_path", "test.model/vocab")
+        ("result_dir", "../../results/nnfl/trained_models/wsj_framenet_full.trnn.model"),
+        #  ("result_dir", "test.model"),
+        #  ("vocab_path", "test.model/vocab"),
+        ("vocab_path", "../../results/nnfl/trained_models/wsj_framenet_full.trnn.model/vocab")
     ])
 
     # Get the word vectors
@@ -120,8 +120,7 @@ def train_and_save_model():
     epoch = nn.minibatch_train(
         lr=p["lr"],
         minibatch=p["minibatch"],
-        #  max_epochs=p["max_epochs"],
-        max_epochs=1,
+        max_epochs=p["max_epochs"],
         split_pos=train[train_file][2],
         verbose=p["training_detail"]
     )
@@ -134,8 +133,8 @@ def train_and_save_model():
 
 def load_and_test():
     p = OrderedDict([
-        ("test_path", "../data/sample"),
-        #  ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test/"),
+        #  ("test_path", "../data/sample"),
+        ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -143,11 +142,11 @@ def load_and_test():
         ("use_padding", False),
         ("verb_index", True),
         # Minimum number of sentences of training data
-        ("minimum_sent_num", 70), # ATTENTION TO THIS
+        ("minimum_sent_num", 0), # ATTENTION TO THIS
         # Minimum frame of verb of training data
-        ("minimum_frame", 2), # ATTENTION TO THIS
-        ("model_path", "test.model"),
-        ("vocab_path", "test.model/vocab")
+        ("minimum_frame", 0), # ATTENTION TO THIS
+        ("model_path", "../../results/nnfl/trained_models/wsj_framenet_full.trnn.model"),
+        ("vocab_path", "../../results/nnfl/trained_models/wsj_framenet_full.trnn.model/vocab")
     ])
 
     # Load the vocab

@@ -225,7 +225,7 @@ def write_vocab_to_file(file_path, vocab, oov_tag=None):
     out_file = open(file_path, "w")
     print(str(oov_tag), file=out_file)
     for word, index in vocab.items():
-        print("%s,%s" % (word, index), file=out_file)
+        print("%s<-word--index->%s" % (word, index), file=out_file)
     out_file.close()
 
 def load_vocab_from_file(file_path):
@@ -245,9 +245,10 @@ def load_vocab_from_file(file_path):
         if line == '':
             continue
         try:
-            word, index = line.split(",")
+            word, index = line.split("<-word--index->")
+            index = int(index)
         except:
-            raise Exception("%s format error" % file_path)
+            raise Exception("line: %s in %s format error" % (line, file_path))
         vocab[word] = index
     load_file.close()
     return [vocab, oov_tag]
