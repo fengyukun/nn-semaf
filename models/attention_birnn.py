@@ -7,6 +7,8 @@ Brief:  The implementation of Attention-based Bidirectional Recurrent Neural Net
 
 # For python2
 from __future__ import print_function
+# Activate automatic float divison for python2.
+from __future__ import division
 import os
 import sys
 sys.path.append("../lib/")

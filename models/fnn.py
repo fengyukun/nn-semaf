@@ -5,6 +5,10 @@ Date:  2016-06-02
 Brief:  The implementation of Feedward Neural Network (FNN)
 """
 
+# For python2
+from __future__ import print_function
+# Activate automatic float divison for python2.
+from __future__ import division
 import sys
 sys.path.append("../lib/")
 sys.path.append("../utils/")

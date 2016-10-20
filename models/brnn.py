@@ -7,6 +7,8 @@ Brief:  The implementation of Target Recurrent Neural Network (BRNN)
 
 # For python2
 from __future__ import print_function
+# Activate automatic float divison for python2.
+from __future__ import division
 import sys
 import os
 sys.path.append("../lib/")
@@ -330,6 +332,10 @@ class BRNN(object):
             The epoch number during traing on train data
         """
 
+        last_cost = -1000
+        stable_threshold = 10 
+        stable_max_times = 3
+        stable_times = 0
         for epoch in range(1, max_epochs + 1):
             n_batches = int(self.y.shape[0] / minibatch)
             batch_i = 0
@@ -355,8 +361,39 @@ class BRNN(object):
                 logging.info("epoch: %d training,on train data, "
                              "cross-entropy:%f, zero-one loss: %f"
                              % (epoch, cost, error))
-            if abs(error - 0.0) <= 0.0001:
-                break
+            # If the cost is stable for stable_max_times within stable_threshold,
+            # the training is stopped.
+            if abs(cost - last_cost) <= stable_threshold:
+                if verbose:
+                    print("The cost is stable within %s from last cost." % stable_threshold)
+                stable_times += 1
+                if stable_times >= stable_max_times:
+                    break
+
+            # If the zero-one loss is zero, the training is stopped.
+            #  if abs(error - 0.0) <= 0.0001:
+                #  break
+
+            # Dynamically adjust the learning rate.
+            # If cost is reduced bigger than reduced_percentage, the learning rate is increased by
+            # increased_percentage.
+            reduced_percentage = 0.10
+            increased_percentage = 0.05
+            diff = last_cost - cost
+            if (diff > 0 and (diff / last_cost) >= reduced_percentage):
+                lr *= (1 + increased_percentage)
+                if verbose:
+                    print("More than %s reduced cost has been observed. Learning rate is"\
+                          "increased to %s" % (reduced_percentage, lr))
+            # If cost is actually increasing, decrease the learning rate by decrease_percentage
+            decrease_percentage = 0.3
+            if diff < 0:
+                lr *= (1 - decrease_percentage) 
+                if verbose:
+                    print("Cost increased. Learning rate is decreased to %s" % lr)
+
+            last_cost = cost
+
         return epoch
 
     def predict(self, x, split_pos=None):
