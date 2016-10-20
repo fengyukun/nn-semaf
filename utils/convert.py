@@ -29,6 +29,7 @@ logging.basicConfig(
 
 def convert_fulltext_framenet(detail=True):
     """Convert the fulltext of framenet to the required input format."""
+    # Do not forget to remove the repeated sentences
     output_file = "fulltext_framenet"
     out_fh = open(output_file, "w")
     docs = fn.documents()
@@ -68,11 +69,10 @@ def convert_fulltext_framenet(detail=True):
                             label_end = label['end']
                             target = text[label_start:label_end + 1].strip()
                             left_sent = text[0:label_start]
+                            left_sent = remove_punctuations(left_sent)
                             right_sent = text[label_end + 1:]
+                            right_sent = remove_punctuations(right_sent)
                             out_line =  "%s\t%s\t%s\t%s" % (frame_name, left_sent, target, right_sent)
-                            for cha in out_line:
-                                if cha in string.punctuation:
-                                    out_line = out_line.replace(cha, "")
                             try:
                                 print(out_line, file=out_fh)
                             except:
