@@ -5,6 +5,8 @@ Date:  2016-05-21
 Brief:  The implementation of recurrent layer
 """
 
+# Activate automatic float divison for python2.
+from __future__ import division
 import copy
 from inc import*
 from gradient_checker import GradientChecker

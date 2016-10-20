@@ -7,6 +7,8 @@ Brief:  Examples of running models
 
 # For python2
 from __future__ import print_function
+# Activate automatic float divison for python2.
+from __future__ import division
 import sys
 
 sys.path.append("../lib/")
@@ -49,7 +51,7 @@ def train_and_save_model():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("train_path", "../../data/corpus/wsj_framnet"),
+        ("train_path", "../../data/corpus/sample/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -65,7 +67,7 @@ def train_and_save_model():
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
-        ("n_h", 100), # ATTENTION TO THIS
+        ("n_h", 45), # ATTENTION TO THIS
         ("up_wordvec", False),
         ("use_bias", True),
         ("act_func", "tanh"),
@@ -76,10 +78,10 @@ def train_and_save_model():
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
-        ("result_dir", "../../results/nnfl/trained_models/wsj_framenet_full.trnn.model"),
+        ("result_dir", "../../results/nnfl/trained_models/lr_dynamic_test"),
         #  ("result_dir", "test.model"),
         #  ("vocab_path", "test.model/vocab"),
-        ("vocab_path", "../../results/nnfl/trained_models/wsj_framenet_full.trnn.model/vocab")
+        ("vocab_path", "../../results/nnfl/trained_models/lr_dynamic_test/vocab")
     ])
 
     # Get the word vectors
@@ -361,5 +363,5 @@ def train_and_test():
 
 if __name__ == "__main__":
     #  train_and_test()
-    #  train_and_save_model()
-    load_and_test()
+    train_and_save_model()
+    #  load_and_test()

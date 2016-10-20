@@ -7,6 +7,8 @@ Brief:  Examples of running models
 
 # For python2
 from __future__ import print_function
+# Activate automatic float divison for python2.
+from __future__ import division
 import sys
 import os
 sys.path.append("../lib/")

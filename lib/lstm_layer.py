@@ -7,6 +7,8 @@ Brief:  The implementation of long short-term memory (LSTM) layer
 
 # For python2
 from __future__ import print_function
+# Activate automatic float divison for python2.
+from __future__ import division
 import copy
 import os
 from inc import*

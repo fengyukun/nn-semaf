@@ -7,6 +7,8 @@ Brief:  The implementation of bidirectional recurrent layer
 
 # For python2
 from __future__ import print_function
+# Activate automatic float divison for python2.
+from __future__ import division
 import os
 import copy
 from inc import*

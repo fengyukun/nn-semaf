@@ -6,6 +6,8 @@ Brief:  The implementation of Attention-based Bidirectional Recurrent Neural
 Network (ABiRNN). This class is implemented for comparing.
 """
 
+# Activate automatic float divison for python2.
+from __future__ import division
 import sys
 sys.path.append("../lib/")
 sys.path.append("../utils/")

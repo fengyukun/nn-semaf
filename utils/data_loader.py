@@ -15,6 +15,8 @@ The input data should have following format:
             3\tI like\teating\t
 """
 
+# Activate automatic float divison for python2.
+from __future__ import division
 import os
 import nltk
 import numpy as np

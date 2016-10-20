@@ -5,6 +5,8 @@ Date:   2016-06-02
 Brief:  Test the combination of layers
 """
 
+# Activate automatic float divison for python2.
+from __future__ import division
 from inc import*
 from gradient_checker import GradientChecker
 import layer

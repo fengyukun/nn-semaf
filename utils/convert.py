@@ -5,6 +5,8 @@ Date:   2016/03/23
 Brief:  Convert pdev data and SemEval 2015 data to the required format
 """
 
+# Activate automatic float divison for python2.
+from __future__ import division
 import os
 import html
 import nltk

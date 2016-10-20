@@ -5,6 +5,8 @@ Date:  2016-07-08
 Brief:  The implementation of baselines: Random and most frequent (MF)
 """
 
+# Activate automatic float divison for python2.
+from __future__ import division
 import sys
 sys.path.append("../lib/")
 sys.path.append("../utils/")

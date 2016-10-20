@@ -5,6 +5,10 @@ Date:   2016-05-16
 Brief:  The gradient checker
 """
 
+# For python2
+from __future__ import print_function
+# Activate automatic float divison for python2.
+from __future__ import division
 from inc import*
 
 
