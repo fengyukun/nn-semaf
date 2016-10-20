@@ -1,4 +1,6 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """
 Authors: fengyukun
 Date:   2016/03/23
@@ -7,12 +9,15 @@ Brief:  Convert pdev data and SemEval 2015 data to the required format
 
 # Activate automatic float divison for python2.
 from __future__ import division
+# For python2
+from __future__ import print_function
 import os
-import html
+#  import html
 import nltk
 from nltk.corpus import ptb
 from nltk.corpus import propbank
 from nltk.stem import WordNetLemmatizer
+from nltk.corpus import framenet as fn
 import codecs
 import string
 from tools import*
@@ -21,6 +26,59 @@ logging.basicConfig(
     level=logging.DEBUG,
     format=" [%(levelname)s]%(filename)s:%(lineno)s[function:%(funcName)s] %(message)s"
 )
+
+def convert_fulltext_framenet(detail=True):
+    """Convert the fulltext of framenet to the required input format."""
+    output_file = "fulltext_framenet"
+    out_fh = open(output_file, "w")
+    docs = fn.documents()
+    docs_len = len(docs)
+    for i in range(0, docs_len):
+        doc = docs[i]
+        doc_id = doc['ID']
+        doc_name = doc['filename']
+        # Annotated docs
+        adoc = fn.annotated_document(doc_id)
+        # Sentences
+        sents = adoc['sentence']
+        if detail:
+            print("To process %s (%s/%s)" % (doc_name, i + 1, docs_len))
+        for sent in sents:
+            text = sent['text']
+            # annotation set
+            annotation_set = sent['annotationSet']
+            for annotation in annotation_set:
+                if annotation['status'] != 'MANUAL' or 'frameName' not in annotation:
+                    continue
+                #  print("text:%s. doc_name:%s annotation id:%s" % (text, doc_name, annotation['ID']))
+                #  lu_name = annotation['luName']
+                #  lu_id = annotation['luID']
+                #  frame_id = annotation['frameID']
+                frame_name = annotation['frameName']
+                # Get layer
+                layers = annotation['layer']
+                for layer in layers:
+                    layer_rank = layer['rank']
+                    layer_name = layer['name']
+                    labels = layer['label']
+                    for label in labels:
+                        label_name = label['name']
+                        if layer_name == 'Target' and label_name == 'Target':
+                            label_start = label['start']
+                            label_end = label['end']
+                            target = text[label_start:label_end + 1].strip()
+                            left_sent = text[0:label_start]
+                            right_sent = text[label_end + 1:]
+                            out_line =  "%s\t%s\t%s\t%s" % (frame_name, left_sent, target, right_sent)
+                            for cha in out_line:
+                                if cha in string.punctuation:
+                                    out_line = out_line.replace(cha, "")
+                            try:
+                                print(out_line, file=out_fh)
+                            except:
+                                print("Exception happens at print. Skip it")
+                                continue
+    out_fh.close() 
 
 def convert_chn_propbank(detail=True):
     """
@@ -884,7 +942,8 @@ if __name__ == "__main__":
     # convert_pdev()
     # convert_chn_text()
     #  convert_propbank()
-    convert_semlink_wsj2()
+    #  convert_semlink_wsj2()
     #  merge_split_data()
     #  convert_chn_propbank()
+    convert_fulltext_framenet()
 
