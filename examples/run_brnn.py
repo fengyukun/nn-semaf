@@ -46,12 +46,10 @@ def train_and_save_model():
     """
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
         ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
-        #  ("data_path", "../data/sample"),
-        ("train_path", "../../data/corpus/sample/"),
+        ("train_path", "../../data/corpus/fulltext_framenet/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -59,29 +57,27 @@ def train_and_save_model():
         ("use_padding", False),
         ("verb_index", True),
         # Validation part and train_part are from train_data_path
-        ("train_part", 1.0),
-        ("test_part", 0.0),
-        ("validation_part", 0.0),
+        ("train_part", 0.7),
+        ("test_part", 0.2),
+        ("validation_part", 0.1),
         # Minimum number of sentences of training data
         ("minimum_sent_num", 70), # ATTENTION TO THIS
         # Minimum frame of verb of training data
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
-        ("n_h", 45), # ATTENTION TO THIS
+        ("n_h", 100), # ATTENTION TO THIS
         ("up_wordvec", False),
         ("use_bias", True),
         ("act_func", "tanh"),
         ("use_lstm", True),
         ("max_epochs", 100),
-        ("minibatch", 5),
+        ("minibatch", 50), # ATTENTION TO THIS
         ("lr", 0.1),
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
-        ("result_dir", "../../results/nnfl/trained_models/lr_dynamic_test"),
-        #  ("result_dir", "test.model"),
-        #  ("vocab_path", "test.model/vocab"),
-        ("vocab_path", "../../results/nnfl/trained_models/lr_dynamic_test/vocab")
+        ("result_dir", "../../results/nnfl/trained_models/fulltext_fn_721.newlr_trnn.model"),
+        ("vocab_path", "../../results/nnfl/trained_models/fulltext_fn_721.newlr_trnn.model/vocab")
     ])
 
     # Get the word vectors
