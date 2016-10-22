@@ -733,8 +733,11 @@ def convert_semeval_without_extraction(detail=True):
 
     # Parameters
     p = {
-        "data_sets": ["../cpa_data/Microcheck/", "../cpa_data/testdata/Microcheck"],
-        "output_dir": "../data/semeval_mic_train_and_test_no_extraction"
+        #  "data_sets": ["../cpa_data/Microcheck/", "../cpa_data/testdata/Microcheck"],
+        "data_sets": ["../../data/corpus/semeval2015_task15/test/Wingspread/"],
+        #  "output_dir": "../data/semeval_mic_train_and_test_no_extraction"
+        #  "output_dir": "../data/semeval_wing_test"
+        "output_dir": "../../data/corpus/semeval_wing_test/"
     }
     #  if detail:
         #  print_params(p)
@@ -761,7 +764,9 @@ def convert_semeval_without_extraction(detail=True):
 
             out_file_path = "%s/%s" % (p["output_dir"], verb_name)
             fh_out = open(out_file_path, "w")
-            fh = open(file_path, "r", encoding = "ISO-8859-1")
+            # Python 3
+            #  fh = open(file_path, "r", encoding = "ISO-8859-1")
+            fh = open(file_path, "r")
             sent = ""
             cluster_id = -1
             for line in fh:
@@ -936,7 +941,7 @@ def convert_pdev(detail=True):
         fh_out.close()
 
 if __name__ == "__main__":
-    # convert_semeval_without_extraction()
+    convert_semeval_without_extraction()
     #  convert_semeval_with_extraction()
     #  convert_semeval_with_key_words_showing()
     # convert_pdev()
@@ -945,5 +950,5 @@ if __name__ == "__main__":
     #  convert_semlink_wsj2()
     #  merge_split_data()
     #  convert_chn_propbank()
-    convert_fulltext_framenet()
+    #  convert_fulltext_framenet()
 
