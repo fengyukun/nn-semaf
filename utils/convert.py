@@ -27,6 +27,89 @@ logging.basicConfig(
     format=" [%(levelname)s]%(filename)s:%(lineno)s[function:%(funcName)s] %(message)s"
 )
 
+def convert_senseval3_english():
+    """Convert senseval-3 lexical sample task (English) to the required format"""
+    #  sent_file = "../data/senseval-3.eng/train/EnglishLS.train"
+    #  key_file = "../data/senseval-3.eng/train/EnglishLS.train.key"
+    sent_file = "../data/senseval-3.eng/test/EnglishLS.test"
+    key_file = "../data/senseval-3.eng/test/EnglishLS.test.key"
+    out_dir = "../data/parsed_senseval3.eng/test.kepinstid"
+    # Whether keep instance id.
+    keep_inst_id = True
+    os.system("rm %s -rf" % out_dir)
+    os.system("mkdir -p %s" % out_dir)
+
+    # Dict of instance ID to sense tag.
+    inst_id_to_sense_tag = {}
+    # Dict of instance ID to lexical unit ID.
+    inst_id_to_lu_id = {}
+
+    # Read key file
+    key_fh = open(key_file, "r")
+    for line in key_fh:
+        line = line.strip()
+        if line == '':
+            continue
+        item = line.split(" ")
+        # Lexical unit ID
+        lu_id = item[0]
+        # Instance ID
+        inst_id = item[1]
+        # Only choose the first sense tag for simplicity.
+        sense_tag = item[2]
+        inst_id_to_sense_tag[inst_id] = sense_tag
+        inst_id_to_lu_id[inst_id] = lu_id
+    key_fh.close()
+
+    # Read sentences file
+    inst_id = None
+    lu_id = None
+    sense_tag = None
+    # Dict of lexical unit ID to the list of outlines
+    lu_id_to_outline = {}
+    sent_fh = open(sent_file, "r")
+    sent_flag = None
+    for line in sent_fh:
+        original_line = line.strip()
+        line = line.strip()
+        if line == '':
+            continue
+        if line.find('<instance id=') == 0:
+            inst_id = line.split(" ")[1].split("=")[1].strip("\"")
+            lu_id = inst_id_to_lu_id[inst_id]
+            sense_tag = inst_id_to_sense_tag[inst_id]
+        if sent_flag:
+            sent_toks = nltk.sent_tokenize(line)
+            candidate_sent = None
+            # Lexical unit identifier
+            lu_identifier = '<head>'
+            for sent_tok in sent_toks:
+                if sent_tok.find(lu_identifier) >= 0:
+                    candidate_sent = sent_tok.strip()
+            candidate_sent = candidate_sent.replace('<head>', "\t").replace("</head>", "\t")
+            candidate_sent = remove_punctuations(candidate_sent)
+            if keep_inst_id:
+                out_line = "%s\t%s" % (inst_id, candidate_sent)
+            else:
+                out_line = "%s\t%s" % (sense_tag, candidate_sent)
+            if lu_id not in lu_id_to_outline:
+                lu_id_to_outline[lu_id] = []
+            lu_id_to_outline[lu_id].append(out_line)
+        if original_line == '<context>':
+            sent_flag = True
+        else:
+            sent_flag = False
+    sent_fh.close()
+
+    # Output
+    for lu_id, out_lines in lu_id_to_outline.items():
+        output_file = "%s/%s" % (out_dir, lu_id)
+        out_fh = open(output_file, "w")
+        for out_line in out_lines:
+            print(out_line, file=out_fh)
+        out_fh.close()
+
+
 def convert_fulltext_framenet(detail=True):
     """Convert the fulltext of framenet to the required input format."""
     # Do not forget to remove the repeated sentences
@@ -941,7 +1024,7 @@ def convert_pdev(detail=True):
         fh_out.close()
 
 if __name__ == "__main__":
-    convert_semeval_without_extraction()
+    #  convert_semeval_without_extraction()
     #  convert_semeval_with_extraction()
     #  convert_semeval_with_key_words_showing()
     # convert_pdev()
@@ -951,4 +1034,4 @@ if __name__ == "__main__":
     #  merge_split_data()
     #  convert_chn_propbank()
     #  convert_fulltext_framenet()
-
+    convert_senseval3_english()
