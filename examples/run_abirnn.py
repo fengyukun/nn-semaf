@@ -10,7 +10,6 @@ from __future__ import print_function
 # Activate automatic float divison for python2.
 from __future__ import division
 import sys
-
 sys.path.append("../lib/")
 sys.path.append("../utils/")
 sys.path.append("../models/")
@@ -18,8 +17,7 @@ from inc import*
 from tools import*
 from data_loader import DataLoader
 from metrics import*
-from brnn import BRNN
-from attention_birnn import ABiRNN
+from abirnn import ABiRNN
 from collections import OrderedDict
 
 
@@ -39,7 +37,6 @@ def gen_print_info(field_names, values):
         res += "%s:%s\t" % (field_names[i], values[i])
     return res
 
-
 def train_and_save_model():
     """Train and save the model to the file for later prediction.
 
@@ -49,7 +46,7 @@ def train_and_save_model():
         ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
-        ("train_path", "../../data/corpus/fulltext_framenet/"),
+        ("train_path", "../../data/corpus/wsj_framnet/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -61,9 +58,9 @@ def train_and_save_model():
         ("test_part", 0.2),
         ("validation_part", 0.1),
         # Minimum number of sentences of training data
-        ("minimum_sent_num", 70), # ATTENTION TO THIS
+        ("minimum_sent_num", 0), # ATTENTION TO THIS
         # Minimum frame of verb of training data
-        ("minimum_frame", 2), # ATTENTION TO THIS
+        ("minimum_frame", 0), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
         ("n_h", 100), # ATTENTION TO THIS
         ("up_wordvec", False),
@@ -73,11 +70,14 @@ def train_and_save_model():
         ("max_epochs", 100),
         ("minibatch", 50), # ATTENTION TO THIS
         ("lr", 0.1),
+        ("norm_func",'softmax'),
+        ("show_key_words", False), # ATTENTION TO THIS
+        ("key_words_tag", "keywordtag"),
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
-        ("result_dir", "../../results/nnfl/trained_models/fulltext_fn_721.newlr_trnn.model"),
-        ("vocab_path", "../../results/nnfl/trained_models/fulltext_fn_721.newlr_trnn.model/vocab")
+        ("result_dir", "../../results/nnfl/trained_models/wsjfn_721.abirnn.model"),
+        ("vocab_path", "../../results/nnfl/trained_models/wsjfn_721.abirnn100nh.model/vocab")
     ])
 
     # Get the word vectors
@@ -96,7 +96,8 @@ def train_and_save_model():
     train_loader = DataLoader(
         data_path=p["train_path"], vocab=vocab, oov=p["oov"],
         left_win=p["left_win"], right_win=p["right_win"],
-        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
+        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"],
+        show_key_words=p["show_key_words"], key_words_tag=p["key_words_tag"]
     )
     train, _, _ = train_loader.get_data(
         p["train_part"], p["test_part"], p["validation_part"],
@@ -108,12 +109,13 @@ def train_and_save_model():
     train_file = train.keys()[0]
 
     # Train
-    nn = BRNN()
+    nn = ABiRNN()
     nn.init(
         x=train[train_file][0], label_y=train[train_file][1],
         word2vec=word2vec, n_h=p["n_h"],
         up_wordvec=p["up_wordvec"], use_bias=p["use_bias"],
-        act_func=p["act_func"], use_lstm=p["use_lstm"]
+        act_func=p["act_func"], use_lstm=p["use_lstm"],
+        norm_func=p["norm_func"]
     )
     epoch = nn.minibatch_train(
         lr=p["lr"],
@@ -128,19 +130,20 @@ def train_and_save_model():
     # Write the vocab to file
     write_vocab_to_file(p["vocab_path"], vocab, oov_tag=p["oov"])
 
-
 def load_and_test():
-    model_path = "../../results/nnfl/trained_models/fulltext_fn_721.newlr_trnn.model"
+    model_path = "../../results/nnfl/trained_models/wsjfn_721.abirnn.model"
     p = OrderedDict([
-        #  ("test_path", "../data/sample"),
         #  ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test/"),
-        ("test_path", "../../data/corpus/semeval_wing_test"),
+        #  ("test_path", "../../data/corpus/semeval_wing_test"),
+        ("test_path", "../../data/corpus/semeval_mic_train_and_test_with_key_words/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
         ("lower", True),
         ("use_padding", False),
         ("verb_index", True),
+        ("show_key_words",True), # ATTENTION TO THIS
+        ("key_words_tag", "keywordtag"),
         # Minimum number of sentences of training data
         ("minimum_sent_num", 0), # ATTENTION TO THIS
         # Minimum frame of verb of training data
@@ -155,7 +158,8 @@ def load_and_test():
     test_loader = DataLoader(
         data_path=p["test_path"], vocab=vocab, oov=oov_tag,
         left_win=p["left_win"], right_win=p["right_win"],
-        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
+        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"],
+        show_key_words=p["show_key_words"], key_words_tag=p["key_words_tag"]
     )
     _, test, _ = test_loader.get_data(
         0.0, 1.0, 0.0,
@@ -165,7 +169,7 @@ def load_and_test():
     )
 
     # Load model
-    nn = BRNN()
+    nn = ABiRNN()
     nn.load_from_files(p["model_path"])
 
     field_names = [
@@ -173,6 +177,8 @@ def load_and_test():
         "sentence number (test data)",
         "frame number(test data)",
     ]
+    if p["show_key_words"]:
+        field_names.append("test_map_score")
 
     # Average statistics over all verbs
     scores_overall = np.zeros(len(field_names), dtype=FLOAT)
@@ -184,12 +190,22 @@ def load_and_test():
         precision, recall, f_score = bcubed_score(
             y_true=test[verb][1], y_pred=y_pred
         )
+        attention_matrix = nn.attention_matrix
+        test_p, test_r, test_f = micro_average_score(
+            y_true=test[verb][1], y_pred=y_pred
+        )
 
         scores = [
             precision, recall, f_score,
             len(test[verb][1]),
             len(set(test[verb][1])),
         ]
+        if p["show_key_words"]:
+            map_score = mean_average_precision(
+                y_trues_array=test[verb][3], y_scores_array=attention_matrix
+            )
+            scores.append(map_score)
+
         scores_overall += scores
         print("current verb:%s, scores are:" % verb)
         print(gen_print_info(field_names, scores))
@@ -205,13 +221,13 @@ def load_and_test():
 def train_and_test():
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
+        ("word2vec_path", "../data/sample_word2vec.txt"),
+        #  ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train/"),
-        ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test/"),
+        ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train"),
+        ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -219,29 +235,27 @@ def train_and_test():
         ("use_padding", False),
         ("verb_index", True),
         # Minimum number of sentences of training data
-        ("minimum_sent_num", 70), # ATTENTION TO THIS
+        ("minimum_sent_num", 0), # ATTENTION TO THIS
         # Minimum frame of verb of training data
-        ("minimum_frame", 2), # ATTENTION TO THIS
+        ("minimum_frame", 0), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
         ("n_h", 45), # ATTENTION TO THIS
         ("up_wordvec", False),
         ("use_bias", True),
         ("act_func", "tanh"),
         ("use_lstm", True),
-        ("max_epochs", 100),
-        ("minibatch", 5),
+        ("max_epochs", 1),
+        ("minibatch", 10),
         ("lr", 0.1),
+        ("norm_func",'softmax'),
         ("random_vectors", False), # ATTENTION TO THIS
+        ("show_key_words",True), # ATTENTION TO THIS
+        ("key_words_tag", "keywordtag"),
         ("\nOther parameters", ""),
         ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../results/")
+        ("prediction_results", "../../results/nnfl/abinn/abinn_test_logic")
     ])
-    result_file = "n_h%s_lr%s_%s" % (p["n_h"], p["lr"],
-                                os.path.basename(p["train_path"]))
-
-    if not os.path.isdir(p["prediction_results"]):
-        os.system("mkdir -p %s" % p["prediction_results"])
-    p["prediction_results"] += "/" + result_file
+    os.system("mkdir -p %s" % os.path.dirname(p["prediction_results"]))
 
     if p["random_vectors"]:
         vocab, invocab, word2vec = build_vocab(
@@ -258,10 +272,11 @@ def train_and_test():
     train_loader = DataLoader(
         data_path=p["train_path"], vocab=vocab, oov=p["oov"],
         left_win=p["left_win"], right_win=p["right_win"],
-        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
+        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"],
+        show_key_words=p["show_key_words"], key_words_tag=p["key_words_tag"]
     )
-    train, _, _ = train_loader.get_data(
-        1, 0.0, 0.0,
+    train, _, validation = train_loader.get_data(
+        0.9, 0.0, 0.1,
         sent_num_threshold=0,
         frame_threshold=p["minimum_frame"], 
         verb_index=p["verb_index"]
@@ -271,7 +286,8 @@ def train_and_test():
     test_loader = DataLoader(
         data_path=p["test_path"], vocab=vocab, oov=p["oov"],
         left_win=p["left_win"], right_win=p["right_win"],
-        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
+        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"],
+        show_key_words=p["show_key_words"], key_words_tag=p["key_words_tag"]
     )
     _, test, _ = test_loader.get_data(
         0.0, 1.0, 0.0,
@@ -279,7 +295,6 @@ def train_and_test():
         frame_threshold=0, 
         verb_index=p["verb_index"]
     )
-    validation = test
 
     field_names = [
         'precision', 'recall', 'f-score',
@@ -290,6 +305,9 @@ def train_and_test():
         "sentence number (validation data)",
         "valid_fscore"
     ]
+    if p["show_key_words"]:
+        field_names.append("test_map_score")
+        field_names.append("valid_map_score")
 
     # Average statistics over all verbs
     scores_overall = np.zeros(len(field_names), dtype=FLOAT)
@@ -298,12 +316,14 @@ def train_and_test():
     verbs = train.keys()
     for verb in verbs:
         verb_counter += 1
-        # Build BRNN model for each verb
-        rnn = BRNN(
+        # Build TRNN model for each verb
+        rnn = ABiRNN()
+        rnn.init(
             x=train[verb][0], label_y=train[verb][1],
             word2vec=word2vec, n_h=p["n_h"],
             up_wordvec=p["up_wordvec"], use_bias=p["use_bias"],
-            act_func=p["act_func"], use_lstm=p["use_lstm"]
+            act_func=p["act_func"], use_lstm=p["use_lstm"],
+            norm_func=p["norm_func"]
         )
 
         epoch = rnn.minibatch_train(
@@ -314,18 +334,24 @@ def train_and_test():
             verbose=p["training_detail"]
         )
 
+        # Run trained model on test data
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
-        precision, recall, f_score = bcubed_score(
+        attention_matrix = rnn.attention_matrix
+        test_p, test_r, test_f = micro_average_score(
             y_true=test[verb][1], y_pred=y_pred
         )
-        valid_pred = rnn.predict(validation[verb][0],
-                                 split_pos=validation[verb][2])
-        _, _, valid_f = bcubed_score(
+
+        # Run trained model on validation data
+        valid_pred = rnn.predict(
+            validation[verb][0], split_pos=validation[verb][2]
+        )
+        valid_attention_matrix = rnn.attention_matrix
+        valid_p, valid_r, valid_f = micro_average_score(
             y_true=validation[verb][1], y_pred=valid_pred
         )
 
         scores = [
-            precision, recall, f_score,
+            test_p, test_r, test_f,
             len(train[verb][1]),
             len(test[verb][1]),
             len(set(test[verb][1])),
@@ -333,6 +359,16 @@ def train_and_test():
             len(validation[verb][1]),
             valid_f
         ]
+        if p["show_key_words"]:
+            map_score = mean_average_precision(
+                y_trues_array=test[verb][3], y_scores_array=attention_matrix
+            )
+            valid_map_score = mean_average_precision(
+                y_trues_array=validation[verb][3],
+                y_scores_array=valid_attention_matrix
+            )
+            scores.append(map_score)
+            scores.append(valid_map_score)
         scores_overall += scores
         print("current verb:%s, scores are:" % verb)
         print(gen_print_info(field_names, scores))
@@ -342,7 +378,7 @@ def train_and_test():
 
         # Print prediction results
         sents = indexs2sents(test[verb][0], invocab)
-        print("verb: %s\tf-score:%f" % (verb, f_score), file=fh_pr)
+        print("verb: %s\tf-score:%f" % (verb, test_f), file=fh_pr)
         for i in range(0, len(test[verb][1])):
             is_true = True if test[verb][1][i] == y_pred[i] else False
             out_line = "%s\tpredict:%s\ttrue:%s\t" % (is_true, y_pred[i], test[verb][1][i])
@@ -360,6 +396,6 @@ def train_and_test():
     fh_pr.close()
 
 if __name__ == "__main__":
+    train_and_save_model()
+    #  load_and_test()
     #  train_and_test()
-    #  train_and_save_model()
-    load_and_test()

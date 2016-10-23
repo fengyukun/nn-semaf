@@ -2,7 +2,7 @@
 """
 Authors: fengyukun
 Date: 2016-06-18
-Brief:  The implementation of Target Recurrent Neural Network (BRNN)
+Brief:  The implementation of Target based Recurrent Neural Network (TRNN)
 """
 
 # For python2
@@ -21,14 +21,14 @@ import recurrent_layer
 import lstm_layer
 
 
-class BRNN(object):
+class TRNN(object):
     """
-    Bidirectional Recurrent Neural Network (BRNN) class
+    Target based Recurrent Neural Network (TRNN) class
     """
     def init(self, x, label_y, word2vec, n_h, up_wordvec=False,
              use_bias=True, act_func='tanh', use_lstm=False):
         """
-        Init BRNN
+        Init TRNN
         x: numpy.ndarray, 2d jagged arry
             The input data. The index of words
         label_y: numpy.ndarray, 1d array
@@ -204,7 +204,7 @@ class BRNN(object):
         """
         Cost function
         split_pos: 1d array like
-            Start position in x. BRNN will compute from split_pos. The
+            Start position in x. TRNN will compute from split_pos. The
             left_layer will compute from 0 to split_pos(not included)
             and the right_layer will compute from split_pos to last.
             If split_pos is None, split_pos will
@@ -222,7 +222,7 @@ class BRNN(object):
         x: numpy.ndarray, 2d arry
             The input data. The index of words
         split_pos: 1d array like
-            Start position in x. BRNN will compute from split_pos. The
+            Start position in x. TRNN will compute from split_pos. The
             left_layer will compute from 0 to split_pos(not included)
             and the right_layer will compute from split_pos to last.
             If split_pos is None, split_pos will
@@ -289,7 +289,7 @@ class BRNN(object):
         lr: float
             Learning rate
         split_pos: 1d array like
-            Start position in x. BRNN will compute from split_pos. The
+            Start position in x. TRNN will compute from split_pos. The
             left_layer will compute from 0 to split_pos(not included)
             and the right_layer will compute from split_pos to last.
             If split_pos is None, split_pos will
@@ -307,7 +307,8 @@ class BRNN(object):
                     vectorized_x[i][j] -= lr * go[i][j]
 
     def minibatch_train(self, lr=0.1, minibatch=5, max_epochs=100,
-                        split_pos=None, verbose=False):
+                        split_pos=None, verbose=False,
+                        training_method='dynamic', stable_method='zero_one_loss'):
         """
         Minibatch training over x. Training will be stopped when the zero-one
         loss is zero on x.
@@ -319,23 +320,42 @@ class BRNN(object):
         max_epochs: int
             the max epoch
         split_pos: 1d array like
-            Start position in x. BRNN will compute from split_pos. The
+            Start position in x. TRNN will compute from split_pos. The
             left_layer will compute from 0 to split_pos(not included)
             and the right_layer will compute from split_pos to last.
             If split_pos is None, split_pos will
             be the half of current row of x.
         verbose: bool
             whether to print information during each epoch training
+        training_method: str, two options are:
+            dynamic: The leaning rate is dynamically adjusted. 
+            fixed: The learning rate is fixed.
+        stable_method: two options are:
+            'zero_one_loss': The training considers to be stable when zero one loss is zero.
+            'cost_stable': The training considers to be stable when the cost is continuously
+            stable. The 'fixed' and 'cost_table' combination are not supported.
         Return
         ----
         train_epoch: int
             The epoch number during traing on train data
         """
 
-        last_cost = None
-        stable_threshold = 10 
-        stable_max_times = 3
-        stable_times = 0
+        if training_method not in ['dynamic', 'fixed']:
+            logging.error("Unknown training method argument: %s" % training_method)
+            raise Exception
+        if stable_method not in ['zero_one_loss', 'cost_stable']:
+            logging.error("Unknown stable method argument: %s" % training_method)
+            raise Exception
+        if stable_method == 'cost_stable' and training_method == 'fixed':
+            logging.error("Current combination is not supported")
+            raise Exception
+
+        if training_method == 'dynamic':
+            last_cost = None
+            stable_threshold = 2 
+            stable_max_times = 3
+            stable_times = 0
+
         for epoch in range(1, max_epochs + 1):
             n_batches = int(self.y.shape[0] / minibatch)
             batch_i = 0
@@ -362,42 +382,52 @@ class BRNN(object):
                              "cross-entropy:%f, zero-one loss: %f"
                              % (epoch, cost, error))
 
-            # The first epoch
-            if last_cost is None:
+            if training_method == 'dynamic':
+                # The first epoch
+                if last_cost is None:
+                    last_cost = cost
+                    continue
+                # If the cost is stable for stable_max_times within stable_threshold,
+                # the training is stopped.
+                if stable_method == 'cost_stable':
+                    if abs(cost - last_cost) <= stable_threshold:
+                        stable_times += 1
+                        if verbose:
+                            logging.info("The cost is continuously stable for %s times" % stable_times)
+                        if stable_times >= stable_max_times:
+                            break
+                    else:
+                        stable_times = 0
+                if stable_method == 'zero_one_loss':
+                    if abs(error - 0.0) <= 0.0001:
+                        break
+
+                # Dynamically adjust the learning rate.
+                # If cost is reduced bigger than reduced_percentage, the learning rate is increased
+                # by increased_percentage.
+                reduced_percentage = 0.10
+                increased_percentage = 0.05
+                diff = last_cost - cost
+                if (diff > 0 and (diff / last_cost) >= reduced_percentage):
+                    lr *= (1 + increased_percentage)
+                    if verbose:
+                        logging.info("The cost has been reduced by more than %s. Learning rate "\
+                                "is increased to %s" % (reduced_percentage, lr))
+                # If cost is actually increasing by cost_dec_percentage, decrease the learning rate
+                # by decrease_percentage
+                decrease_percentage = 0.05
+                cost_dec_percentage = 0.05
+                if diff < 0 and abs(diff) / last_cost >= cost_dec_percentage:
+                    lr *= (1 - decrease_percentage) 
+                    if verbose:
+                        logging.info("The cost increased. Learning rate is decreased to %s" % lr)
+
                 last_cost = cost
-                continue
-            # If the cost is stable for stable_max_times within stable_threshold,
-            # the training is stopped.
-            if abs(cost - last_cost) <= stable_threshold:
-                stable_times += 1
-                if verbose:
-                    logging.info("The cost is stable for %s times." % stable_times)
-                if stable_times >= stable_max_times:
+
+            if training_method == 'fixed' and stable_method == 'zero_one_loss':
+                # If the zero-one loss is zero, the training is stopped.
+                if abs(error - 0.0) <= 0.0001:
                     break
-
-            # If the zero-one loss is zero, the training is stopped.
-            #  if abs(error - 0.0) <= 0.0001:
-                #  break
-
-            # Dynamically adjust the learning rate.
-            # If cost is reduced bigger than reduced_percentage, the learning rate is increased by
-            # increased_percentage.
-            reduced_percentage = 0.10
-            increased_percentage = 0.05
-            diff = last_cost - cost
-            if (diff > 0 and (diff / last_cost) >= reduced_percentage):
-                lr *= (1 + increased_percentage)
-                if verbose:
-                    logging.info("The cost has been reduced by more than %s. Learning rate is "\
-                          "increased to %s" % (reduced_percentage, lr))
-            # If cost is actually increasing, decrease the learning rate by decrease_percentage
-            decrease_percentage = 0.3
-            if diff < 0:
-                lr *= (1 - decrease_percentage) 
-                if verbose:
-                    logging.info("The cost increased. Learning rate is decreased to %s" % lr)
-
-            last_cost = cost
 
         return epoch
 
@@ -408,7 +438,7 @@ class BRNN(object):
         x: numpy.ndarray, 2d arry
             The input data. The index of words
         split_pos: 1d array like
-            Start position in x. BRNN will compute from split_pos. The
+            Start position in x. TRNN will compute from split_pos. The
             left_layer will compute from 0 to split_pos(not included)
             and the right_layer will compute from split_pos to last.
             If split_pos is None, split_pos will
@@ -438,8 +468,9 @@ def brnn_test():
                           # max_int=voc_size, min_int=0, dim_unit=None)
     label_y = np.random.randint(low=0, high=20, size=x_row)
     word2vec = np.random.uniform(low=0, high=5, size=(voc_size, word_dim))
-    nntest = BRNN(x, label_y, word2vec, n_h, up_wordvec, use_bias,
-                 act_func, use_lstm=use_lstm)
+    nntest = TRNN()
+    nntest.init(x, label_y, word2vec, n_h, up_wordvec, use_bias,
+                act_func, use_lstm=use_lstm)
     split_pos = np.random.randint(low=4, high=8, size=(x_row, ))
 
     # Training
@@ -447,7 +478,12 @@ def brnn_test():
     minibatch = 5
     max_epochs = 100
     verbose = True
-    nntest.minibatch_train(lr, minibatch, max_epochs, split_pos, verbose)
+    training_method = 'dynamic'
+    #  training_method = 'fixed'
+    #  stable_method = 'zero_one_loss'
+    stable_method = 'cost_stable'
+    nntest.minibatch_train(lr, minibatch, max_epochs, split_pos, verbose, training_method,
+                           stable_method)
 
 
 def brnn_gradient_test():
@@ -466,7 +502,7 @@ def brnn_gradient_test():
                           max_int=voc_size, min_int=0, dim_unit=None)
     label_y = np.random.randint(low=0, high=20, size=x_row)
     word2vec = np.random.uniform(low=0, high=5, size=(voc_size, word_dim))
-    nntest = BRNN()
+    nntest = TRNN()
     nntest.init(x, label_y, word2vec, n_h, up_wordvec, use_bias,
                 act_func, use_lstm=use_lstm)
 
@@ -476,7 +512,7 @@ def brnn_gradient_test():
     gc.check_nn(nntest, x, y)
 
     # Write and load test
-    nntest_bak = BRNN()
+    nntest_bak = TRNN()
     nntest.write_to_files("target_lstm")
     nntest_bak.load_from_files("target_lstm")
     print("After loading")
@@ -489,5 +525,5 @@ def brnn_gradient_test():
 
 
 if __name__ == "__main__":
-    # brnn_test()
-    brnn_gradient_test()
+    brnn_test()
+    #  brnn_gradient_test()

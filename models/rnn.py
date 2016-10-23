@@ -263,7 +263,7 @@ class RNN(object):
                     vectorized_x[i][j] -= lr * go[i][j]
 
     def minibatch_train(self, lr=0.1, minibatch=5, max_epochs=100,
-                        verbose=False):
+                        verbose=False, training_method='dynamic', stable_method='zero_one_loss'):
         """
         Minibatch training over x. Training will be stopped when the zero-one
         loss is zero on x.
@@ -276,14 +276,38 @@ class RNN(object):
             the max epoch
         verbose: bool
             whether to print information during each epoch training
+        training_method: str, two options are:
+            dynamic: The leaning rate is dynamically adjusted. 
+            fixed: The learning rate is fixed.
+        stable_method: two options are:
+            'zero_one_loss': The training considers to be stable when zero one loss is zero.
+            'cost_stable': The training considers to be stable when the cost is continuously
+            stable. The 'fixed' and 'cost_table' combination are not supported.
         Return
         ----
         train_epoch: int
             The epoch number during traing on train data
         """
 
+        if training_method not in ['dynamic', 'fixed']:
+            logging.error("Unknown training method argument: %s" % training_method)
+            raise Exception
+        if stable_method not in ['zero_one_loss', 'cost_stable']:
+            logging.error("Unknown stable method argument: %s" % training_method)
+            raise Exception
+        if stable_method == 'cost_stable' and training_method == 'fixed':
+            logging.error("Current combination is not supported")
+            raise Exception
+
+        if training_method == 'dynamic':
+            last_cost = None
+            stable_threshold = 2 
+            stable_max_times = 3
+            stable_times = 0
+
         for epoch in range(1, max_epochs + 1):
             n_batches = int(self.y.shape[0] / minibatch)
+            batch_i = 0
             for batch_i in range(0, n_batches):
                 self.batch_train(
                     self.x[batch_i * minibatch:(batch_i + 1) * minibatch],
@@ -304,8 +328,54 @@ class RNN(object):
                 logging.info("epoch: %d training,on train data, "
                              "cross-entropy:%f, zero-one loss: %f"
                              % (epoch, cost, error))
-            if abs(error - 0.0) <= 0.001:
-                break
+
+            if training_method == 'dynamic':
+                # The first epoch
+                if last_cost is None:
+                    last_cost = cost
+                    continue
+                # If the cost is stable for stable_max_times within stable_threshold,
+                # the training is stopped.
+                if stable_method == 'cost_stable':
+                    if abs(cost - last_cost) <= stable_threshold:
+                        stable_times += 1
+                        if verbose:
+                            logging.info("The cost is continuously stable for %s times" % stable_times)
+                        if stable_times >= stable_max_times:
+                            break
+                    else:
+                        stable_times = 0
+                if stable_method == 'zero_one_loss':
+                    if abs(error - 0.0) <= 0.0001:
+                        break
+
+                # Dynamically adjust the learning rate.
+                # If cost is reduced bigger than reduced_percentage, the learning rate is increased
+                # by increased_percentage.
+                reduced_percentage = 0.10
+                increased_percentage = 0.05
+                diff = last_cost - cost
+                if (diff > 0 and (diff / last_cost) >= reduced_percentage):
+                    lr *= (1 + increased_percentage)
+                    if verbose:
+                        logging.info("The cost has been reduced by more than %s. Learning rate "\
+                                "is increased to %s" % (reduced_percentage, lr))
+                # If cost is actually increasing by cost_dec_percentage, decrease the learning rate
+                # by decrease_percentage
+                decrease_percentage = 0.05
+                cost_dec_percentage = 0.05
+                if diff < 0 and abs(diff) / last_cost >= cost_dec_percentage:
+                    lr *= (1 - decrease_percentage) 
+                    if verbose:
+                        logging.info("The cost increased. Learning rate is decreased to %s" % lr)
+
+                last_cost = cost
+
+            if training_method == 'fixed' and stable_method == 'zero_one_loss':
+                # If the zero-one loss is zero, the training is stopped.
+                if abs(error - 0.0) <= 0.0001:
+                    break
+
         return epoch
 
     def predict(self, x):
@@ -326,14 +396,14 @@ class RNN(object):
 def rnn_test():
     x_col = 5
     no_softmax = 5
-    n_h = 10
+    n_h = 30
     up_wordvec = False
     use_bias = True
     act_func = 'tanh'
     use_lstm = True
-    x_row = 5
+    x_row = 50
     voc_size = 20
-    word_dim = 3
+    word_dim = 10
     x = np.random.randint(low=0, high=voc_size, size=(x_row, x_col))
     label_y = np.random.randint(low=0, high=20, size=x_row)
     word2vec = np.random.uniform(low=0, high=5, size=(voc_size, word_dim))
@@ -342,11 +412,17 @@ def rnn_test():
                 act_func, use_lstm=use_lstm)
 
     # Training
-    lr = 0.015
+    lr = 0.1
     minibatch = 5
     max_epochs = 100
     verbose = True
-    nntest.minibatch_train(lr, minibatch, max_epochs, verbose)
+    training_method = 'dynamic'
+    #  training_method = 'fixed'
+    stable_method = 'zero_one_loss'
+    #  stable_method = 'cost_stable'
+    nntest.minibatch_train(lr, minibatch, max_epochs, verbose, training_method, stable_method)
+    print("Not do gradient check")
+    return
     # Gradient testing
     y = np.array([nntest.label_to_y[i] for i in label_y])
     gc = GradientChecker(epsilon=1e-05)

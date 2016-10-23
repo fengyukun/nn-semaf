@@ -29,11 +29,14 @@ logging.basicConfig(
 
 def convert_senseval3_english():
     """Convert senseval-3 lexical sample task (English) to the required format"""
-    #  sent_file = "../data/senseval-3.eng/train/EnglishLS.train"
-    #  key_file = "../data/senseval-3.eng/train/EnglishLS.train.key"
-    sent_file = "../data/senseval-3.eng/test/EnglishLS.test"
-    key_file = "../data/senseval-3.eng/test/EnglishLS.test.key"
-    out_dir = "../data/parsed_senseval3.eng/test.kepinstid"
+    # Train
+    #  sent_file = "../../data/corpus/senseval-3.eng/train/EnglishLS.train"
+    #  key_file = "../../data/corpus/senseval-3.eng/train/EnglishLS.train.key"
+    #  out_dir = "../../data/corpus/parsed_senseval3.eng/train"
+    # Test
+    sent_file = "../../data/corpus/senseval-3.eng/test/EnglishLS.test"
+    key_file = "../../data/corpus/senseval-3.eng/test/EnglishLS.test.key"
+    out_dir = "../../data/corpus/parsed_senseval3.eng/test.keepinstid"
     # Whether keep instance id.
     keep_inst_id = True
     os.system("rm %s -rf" % out_dir)
@@ -86,7 +89,7 @@ def convert_senseval3_english():
             for sent_tok in sent_toks:
                 if sent_tok.find(lu_identifier) >= 0:
                     candidate_sent = sent_tok.strip()
-            candidate_sent = candidate_sent.replace('<head>', "\t").replace("</head>", "\t")
+            candidate_sent = candidate_sent.replace('<head>', "\t", 1).replace("</head>", "\t", 1)
             candidate_sent = remove_punctuations(candidate_sent)
             if keep_inst_id:
                 out_line = "%s\t%s" % (inst_id, candidate_sent)
