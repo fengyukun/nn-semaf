@@ -130,12 +130,12 @@ def train_and_save_model():
 
 
 def load_and_test():
-    model_path = "../../results/nnfl/trained_models/wsj_framenet_full.trnn.model"
+    model_path = "../../results/nnfl/trained_models/wsj_framenet_721.newlr_trnn.model"
     p = OrderedDict([
         #  ("test_path", "../data/sample"),
         #  ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test/"),
-        #  ("test_path", "../../data/corpus/semeval_wing_test"),
-        ("test_path", "../../data/corpus/parsed_senseval3.eng/test"),
+        ("test_path", "../../data/corpus/semeval_wing_test"),
+        #  ("test_path", "../../data/corpus/parsed_senseval3.eng/test"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -512,5 +512,5 @@ def train_and_test():
 if __name__ == "__main__":
     #  train_and_test()
     #  train_and_save_model()
-    #  load_and_test()
-    train_and_test_sense3_eng()
+    load_and_test()
+    #  train_and_test_sense3_eng()

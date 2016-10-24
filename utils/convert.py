@@ -18,6 +18,7 @@ from nltk.corpus import ptb
 from nltk.corpus import propbank
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import framenet as fn
+import xml.etree.ElementTree
 import codecs
 import string
 from tools import*
@@ -26,6 +27,54 @@ logging.basicConfig(
     level=logging.DEBUG,
     format=" [%(levelname)s]%(filename)s:%(lineno)s[function:%(funcName)s] %(message)s"
 )
+
+def convert_semeval2007_task6(detail=True):
+    """Convert SemEval-2007 task 06 to the required format"""
+    # Train
+    train_input_dir = "../../data/corpus/SemEval-2007-task06/train/xml/"
+    train_out_dir = "../../data/corpus/parsed_semeval2007task06.eng/train"
+    # Test
+    test_input_dir = "../../data/corpus/SemEval-2007-task06/test/xml/"
+    #  test_out_dir = "../../data/corpus/parsed_semeval2007task06.eng/test"
+
+    os.system("rm %s -rf" % train_out_dir)
+    os.system("mkdir -p %s" % train_out_dir)
+    train_files = os.listdir(train_input_dir)
+    for train_file in train_files:
+        # Skip hidden files, e.g., .xx.swp caused by vim
+        if train_file.find(".") == 0:
+            continue
+        if detail:
+            print("To process %s" % train_file)
+        train_file_path = "%s/%s" % (train_input_dir, train_file)
+        root = xml.etree.ElementTree.parse(train_file_path).getroot()
+        # Lexical unit
+        lu = root.attrib["item"]
+        lu += ".p"
+        out_file = "%s/%s" % (train_out_dir, lu)
+        out_fh = open(out_file, "w")
+        for child in root:
+            # Instance ID
+            inst_id = child.attrib["id"]
+            answer = child.find("answer")
+            senseid = answer.attrib["senseid"].strip()
+            context = child.find("context")
+            head = context.find("head")
+            left_sent = context.text
+            if left_sent is None:
+                left_sent = ""
+            left_sent = left_sent.strip()
+            try:
+                # No head text
+                middle = head.text.strip()
+            except:
+                continue
+            right_sent = head.tail
+            if right_sent is None:
+                right_sent = ""
+            right_sent = right_sent.strip()
+            out_line = "%s\t%s\t%s\t%s" % (senseid, left_sent, middle, right_sent)
+        out_fh.close()
 
 def convert_senseval3_english():
     """Convert senseval-3 lexical sample task (English) to the required format"""
@@ -1037,4 +1086,5 @@ if __name__ == "__main__":
     #  merge_split_data()
     #  convert_chn_propbank()
     #  convert_fulltext_framenet()
-    convert_senseval3_english()
+    #  convert_senseval3_english()
+    convert_semeval2007_task6()
