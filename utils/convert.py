@@ -28,6 +28,29 @@ logging.basicConfig(
     format=" [%(levelname)s]%(filename)s:%(lineno)s[function:%(funcName)s] %(message)s"
 )
 
+def tokenize_sent_with_target(left_sent, target, right_sent, remove_punc=True):
+    """Tokenize sentence with targets
+    :left_sent: str
+    :target: lexical unit
+    :right_sent: str
+    :remove_punc: bool, whether remove punctuations is done.
+    :return: list, (left_sent, target, right_sent)
+    """
+
+    verb_identifier = "verb_identifier_xxxxx"
+    complete_sent = "%s %s %s" % (left_sent, verb_identifier, right_sent)
+    sent_toks = nltk.sent_tokenize(complete_sent)
+    candidate_sent = ''
+    for sent_tok in sent_toks:
+        if sent_tok.find(verb_identifier) >= 0:
+            candidate_sent = sent_tok
+    left_sent, right_sent = candidate_sent.split(verb_identifier)
+    if remove_punc:
+        left_sent = remove_punctuations(left_sent)
+        right_sent = remove_punctuations(right_sent)
+    return [left_sent, target, right_sent]
+
+
 def convert_semeval2007_task6(detail=True):
     """Convert SemEval-2007 task 06 to the required format"""
     # Train
@@ -35,11 +58,16 @@ def convert_semeval2007_task6(detail=True):
     train_out_dir = "../../data/corpus/parsed_semeval2007task06.eng/train"
     # Test
     test_input_dir = "../../data/corpus/SemEval-2007-task06/test/xml/"
-    #  test_out_dir = "../../data/corpus/parsed_semeval2007task06.eng/test"
+    test_out_dir = "../../data/corpus/parsed_semeval2007task06.eng/test"
+    # Whether do remove_punctuations and sent_toks
+    is_preprocess = True
 
     os.system("rm %s -rf" % train_out_dir)
     os.system("mkdir -p %s" % train_out_dir)
     train_files = os.listdir(train_input_dir)
+    if detail:
+        print("To process train file")
+    # Convert train files
     for train_file in train_files:
         # Skip hidden files, e.g., .xx.swp caused by vim
         if train_file.find(".") == 0:
@@ -50,7 +78,6 @@ def convert_semeval2007_task6(detail=True):
         root = xml.etree.ElementTree.parse(train_file_path).getroot()
         # Lexical unit
         lu = root.attrib["item"]
-        lu += ".p"
         out_file = "%s/%s" % (train_out_dir, lu)
         out_fh = open(out_file, "w")
         for child in root:
@@ -73,7 +100,56 @@ def convert_semeval2007_task6(detail=True):
             if right_sent is None:
                 right_sent = ""
             right_sent = right_sent.strip()
+            if is_preprocess:
+                left_sent, middle, right_sent = tokenize_sent_with_target(
+                    left_sent, middle, right_sent
+                )
             out_line = "%s\t%s\t%s\t%s" % (senseid, left_sent, middle, right_sent)
+            print(out_line, file=out_fh)
+        out_fh.close()
+
+    os.system("rm %s -rf" % test_out_dir)
+    os.system("mkdir -p %s" % test_out_dir)
+    test_files = os.listdir(test_input_dir)
+    # Convert test files
+    if detail:
+        print("To process test file")
+    for test_file in test_files:
+        # Skip hidden files, e.g., .xx.swp caused by vim
+        if test_file.find(".") == 0:
+            continue
+        if detail:
+            print("To process %s" % test_file)
+        test_file_path = "%s/%s" % (test_input_dir, test_file)
+        root = xml.etree.ElementTree.parse(test_file_path).getroot()
+        # Lexical unit
+        lu = root.attrib["item"]
+        out_file = "%s/%s" % (test_out_dir, lu)
+        out_fh = open(out_file, "w")
+        for child in root:
+            # Instance ID
+            inst_id = child.attrib["id"]
+            context = child.find("context")
+            head = context.find("head")
+            left_sent = context.text
+            if left_sent is None:
+                left_sent = ""
+            left_sent = left_sent.strip()
+            try:
+                # No head text
+                middle = head.text.strip()
+            except:
+                continue
+            right_sent = head.tail
+            if right_sent is None:
+                right_sent = ""
+            right_sent = right_sent.strip()
+            if is_preprocess:
+                left_sent, middle, right_sent = tokenize_sent_with_target(
+                    left_sent, middle, right_sent
+                )
+            out_line = "%s\t%s\t%s\t%s" % (inst_id, left_sent, middle, right_sent)
+            print(out_line, file=out_fh)
         out_fh.close()
 
 def convert_senseval3_english():
@@ -1075,6 +1151,14 @@ def convert_pdev(detail=True):
         fh_in.close()
         fh_out.close()
 
+def test_sent_tok():
+    """test sent_tok"""
+    left_sent = "I will have a good day. He"
+    target = "ate"
+    right_sent = "an apple yesterday."
+    left_sent, target, right_sent = tokenize_sent_with_target(left_sent, target, right_sent)
+    print(left_sent, target, right_sent)
+
 if __name__ == "__main__":
     #  convert_semeval_without_extraction()
     #  convert_semeval_with_extraction()
@@ -1088,3 +1172,4 @@ if __name__ == "__main__":
     #  convert_fulltext_framenet()
     #  convert_senseval3_english()
     convert_semeval2007_task6()
+    #  test_sent_tok()

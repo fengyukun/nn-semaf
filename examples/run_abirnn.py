@@ -43,6 +43,7 @@ def train_and_save_model():
     """
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
+        #  ("word2vec_path", "../data/sample_word2vec.txt"),
         ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
@@ -54,9 +55,9 @@ def train_and_save_model():
         ("use_padding", False),
         ("verb_index", True),
         # Validation part and train_part are from train_data_path
-        ("train_part", 0.7),
-        ("test_part", 0.2),
-        ("validation_part", 0.1),
+        ("train_part", 1.0),
+        ("test_part", 0.0),
+        ("validation_part", 0.0),
         # Minimum number of sentences of training data
         ("minimum_sent_num", 0), # ATTENTION TO THIS
         # Minimum frame of verb of training data
@@ -70,14 +71,16 @@ def train_and_save_model():
         ("max_epochs", 100),
         ("minibatch", 50), # ATTENTION TO THIS
         ("lr", 0.1),
+        ("training_method", "fixed"),
+        ("stable_method", "zero_one_loss"),
         ("norm_func",'softmax'),
         ("show_key_words", False), # ATTENTION TO THIS
         ("key_words_tag", "keywordtag"),
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
-        ("result_dir", "../../results/nnfl/trained_models/wsjfn_721.abirnn.model"),
-        ("vocab_path", "../../results/nnfl/trained_models/wsjfn_721.abirnn100nh.model/vocab")
+        ("result_dir", "../../results/nnfl/trained_models/wsjfnfull.abirnn.fixed.model"),
+        ("vocab_path", "../../results/nnfl/trained_models/wsjfnfull.abirnn.fixed.model/vocab")
     ])
 
     # Get the word vectors
@@ -122,7 +125,9 @@ def train_and_save_model():
         minibatch=p["minibatch"],
         max_epochs=p["max_epochs"],
         split_pos=train[train_file][2],
-        verbose=p["training_detail"]
+        verbose=p["training_detail"],
+        training_method=p["training_method"],
+        stable_method=p["stable_method"]
     )
 
     # Write the model to file
@@ -247,15 +252,20 @@ def train_and_test():
         ("max_epochs", 1),
         ("minibatch", 10),
         ("lr", 0.1),
+        ("training_method", "dynamic"),
+        ("stable_method", "zero_one_loss"),
         ("norm_func",'softmax'),
         ("random_vectors", False), # ATTENTION TO THIS
         ("show_key_words",True), # ATTENTION TO THIS
         ("key_words_tag", "keywordtag"),
         ("\nOther parameters", ""),
         ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/abinn/abinn_test_logic")
+        ("prediction_results", "../../results/nnfl/abinn/abinn_test_logic"),
+        # For SemEval-2007 task 06
+        ("out_dir", "../../results/nnfl/brnn/semeval07task06_out_preprocessd_fixed")
     ])
-    os.system("mkdir -p %s" % os.path.dirname(p["prediction_results"]))
+
+    os.system("mkdir -p %s" % p["out_dir"])
 
     if p["random_vectors"]:
         vocab, invocab, word2vec = build_vocab(
@@ -276,7 +286,7 @@ def train_and_test():
         show_key_words=p["show_key_words"], key_words_tag=p["key_words_tag"]
     )
     train, _, validation = train_loader.get_data(
-        0.9, 0.0, 0.1,
+        1.0, 0.0, 0.0,
         sent_num_threshold=0,
         frame_threshold=p["minimum_frame"], 
         verb_index=p["verb_index"]
@@ -295,6 +305,7 @@ def train_and_test():
         frame_threshold=0, 
         verb_index=p["verb_index"]
     )
+    validation = test
 
     field_names = [
         'precision', 'recall', 'f-score',
@@ -331,15 +342,26 @@ def train_and_test():
             minibatch=p["minibatch"],
             max_epochs=p["max_epochs"],
             split_pos=train[verb][2],
-            verbose=p["training_detail"]
+            verbose=p["training_detail"],
+            training_method=p["training_method"],
+            stable_method=p["stable_method"]
         )
 
         # Run trained model on test data
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
+
         attention_matrix = rnn.attention_matrix
         test_p, test_r, test_f = micro_average_score(
             y_true=test[verb][1], y_pred=y_pred
         )
+
+        # Output
+        out_file = "%s/%s" % (p["out_dir"], verb)
+        out_fh = open(out_file, "w")
+        for instance_id, sense_tag in zip(test[verb][1], y_pred):
+            print("%s %s %s" % (verb, instance_id, sense_tag), file=out_fh)
+        out_fh.close()
+
 
         # Run trained model on validation data
         valid_pred = rnn.predict(

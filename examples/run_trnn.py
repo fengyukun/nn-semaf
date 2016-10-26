@@ -19,7 +19,6 @@ from tools import*
 from data_loader import DataLoader
 from metrics import*
 from trnn import TRNN
-from attention_birnn import ABiRNN
 from collections import OrderedDict
 
 
@@ -57,9 +56,9 @@ def train_and_save_model():
         ("use_padding", False),
         ("verb_index", True),
         # Validation part and train_part are from train_data_path
-        ("train_part", 0.7),
-        ("test_part", 0.2),
-        ("validation_part", 0.1),
+        ("train_part", 1.0),
+        ("test_part", 0.0),
+        ("validation_part", 0.0),
         # Minimum number of sentences of training data
         ("minimum_sent_num", 70), # ATTENTION TO THIS
         # Minimum frame of verb of training data
@@ -73,6 +72,8 @@ def train_and_save_model():
         ("max_epochs", 100),
         ("minibatch", 50), # ATTENTION TO THIS
         ("lr", 0.1),
+        ("training_method", "dynamic"),
+        ("stable_method", "zero_one_loss"),
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
@@ -120,7 +121,9 @@ def train_and_save_model():
         minibatch=p["minibatch"],
         max_epochs=p["max_epochs"],
         split_pos=train[train_file][2],
-        verbose=p["training_detail"]
+        verbose=p["training_detail"],
+        training_method=p["training_method"],
+        stable_method=p["stable_method"]
     )
 
     # Write the model to file
@@ -130,7 +133,7 @@ def train_and_save_model():
 
 
 def load_and_test():
-    model_path = "../../results/nnfl/trained_models/wsj_framenet_721.newlr_trnn.model"
+    model_path = "../../results/nnfl/trained_models/wsj_framenet_full.newlr_trnn.model"
     p = OrderedDict([
         #  ("test_path", "../data/sample"),
         #  ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test/"),
@@ -203,161 +206,6 @@ def load_and_test():
           "infomation over %d verbs are:" % len(verbs))
     print(gen_print_info(field_names, scores_overall / len(verbs)))
 
-def train_and_test_sense3_eng():
-    p = OrderedDict([
-        ("\nParameters for word vectors", ""),
-        ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
-        ("oov", "O_O_V"),
-        ("\nParameters for loading data", ""),
-        ("train_path", "../../data/corpus/parsed_senseval3.eng/train/"),
-        ("test_path", "../../data/corpus/parsed_senseval3.eng/test.keepinstid/"),
-        ("left_win", -1),
-        ("right_win", -1),
-        ("use_verb", True),
-        ("lower", True),
-        ("use_padding", False),
-        ("verb_index", True),
-        # Minimum number of sentences of training data
-        ("minimum_sent_num", 0), # ATTENTION TO THIS
-        # Minimum frame of verb of training data
-        ("minimum_frame", 0), # ATTENTION TO THIS
-        ("\nParameters for rnn model", ""),
-        ("n_h", 45), # ATTENTION TO THIS
-        ("up_wordvec", False),
-        ("use_bias", True),
-        ("act_func", "tanh"),
-        ("use_lstm", True),
-        ("max_epochs", 100),
-        ("minibatch", 10),
-        ("lr", 0.1),
-        ("random_vectors", False), # ATTENTION TO THIS
-        ("\nOther parameters", ""),
-        ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/brnn/trnn_nh45_lr0.1_senseval.eng")
-    ])
-    # Output senseval-3 official output format
-    senseval3_eng_out = "%s/senseval3_eng_out" % (os.path.dirname(p["prediction_results"]),)
-    senseval_fh = open(senseval3_eng_out, "w")
-
-    if p["random_vectors"]:
-        vocab, invocab, word2vec = build_vocab(
-            corpus_dir=p["train_path"], oov=p["oov"],
-            random_wordvec=True, dimension=300
-        )
-    else:
-        # Get vocabulary and word vectors
-        vocab, invocab, word2vec = load_word_vectors(
-            p["word2vec_path"], add_oov=True,oov=p["oov"]
-        )
-
-    # Get train data
-    train_loader = DataLoader(
-        data_path=p["train_path"], vocab=vocab, oov=p["oov"],
-        left_win=p["left_win"], right_win=p["right_win"],
-        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
-    )
-    train, _, validation = train_loader.get_data(
-        0.9, 0.0, 0.1,
-        sent_num_threshold=0,
-        frame_threshold=p["minimum_frame"], 
-        verb_index=p["verb_index"]
-    )
-
-    # Get the test data
-    test_loader = DataLoader(
-        data_path=p["test_path"], vocab=vocab, oov=p["oov"],
-        left_win=p["left_win"], right_win=p["right_win"],
-        use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
-    )
-    _, test, _ = test_loader.get_data(
-        0.0, 1.0, 0.0,
-        sent_num_threshold=0,
-        frame_threshold=0, 
-        verb_index=p["verb_index"]
-    )
-
-    field_names = [
-        'precision', 'recall', 'f-score',
-        "sentence number (train data)",
-        "sentence number (test data)",
-        "frame number(test data)",
-        "epoch (train process)",
-        "sentence number (validation data)",
-        "valid_fscore(micro-average)"
-    ]
-
-    # Average statistics over all verbs
-    scores_overall = np.zeros(len(field_names), dtype=FLOAT)
-    verb_counter = 0
-    fh_pr = open(p["prediction_results"], "w")
-    verbs = train.keys()
-    for verb in verbs:
-        verb_counter += 1
-        # Build TRNN model for each verb
-        rnn = TRNN()
-        rnn.init(
-            x=train[verb][0], label_y=train[verb][1],
-            word2vec=word2vec, n_h=p["n_h"],
-            up_wordvec=p["up_wordvec"], use_bias=p["use_bias"],
-            act_func=p["act_func"], use_lstm=p["use_lstm"]
-        )
-
-        epoch = rnn.minibatch_train(
-            lr=p["lr"],
-            minibatch=p["minibatch"],
-            max_epochs=p["max_epochs"],
-            split_pos=train[verb][2],
-            verbose=p["training_detail"]
-        )
-
-        y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
-        precision, recall, f_score = bcubed_score(
-            y_true=test[verb][1], y_pred=y_pred
-        )
-        # Output sense-3
-        for instance_id, predicted_sensetag in zip(test[verb][1], y_pred):
-            print("%s %s %s" % (verb, instance_id, predicted_sensetag), file=senseval_fh)
-        valid_pred = rnn.predict(validation[verb][0],
-                                 split_pos=validation[verb][2])
-        _, _, valid_f = micro_average_score(
-            y_true=validation[verb][1], y_pred=valid_pred
-        )
-
-        scores = [
-            precision, recall, f_score,
-            len(train[verb][1]),
-            len(test[verb][1]),
-            len(set(test[verb][1])),
-            epoch,
-            len(validation[verb][1]),
-            valid_f
-        ]
-        scores_overall += scores
-        print("current verb:%s, scores are:" % verb)
-        print(gen_print_info(field_names, scores))
-        print("current completeness:%d/%d, average scores over %d verbs are:"
-              % (verb_counter, len(verbs), verb_counter))
-        print(gen_print_info(field_names, scores_overall / verb_counter))
-
-        # Print prediction results
-        sents = indexs2sents(test[verb][0], invocab)
-        print("verb: %s\tf-score:%f" % (verb, f_score), file=fh_pr)
-        for i in range(0, len(test[verb][1])):
-            is_true = True if test[verb][1][i] == y_pred[i] else False
-            out_line = "%s\tpredict:%s\ttrue:%s\t" % (is_true, y_pred[i], test[verb][1][i])
-            out_line += " ".join(sents[i])
-            print(out_line, file=fh_pr)
-
-    # File handles
-    fhs = [fh_pr, sys.stdout]
-    for fh in fhs:
-        print(gen_params_info(p), file=fh)
-        print("End of training and testing, the average "
-              "infomation over %d verbs are:" % len(verbs), file=fh)
-        print(gen_print_info(field_names, scores_overall / len(verbs)),
-              file=fh)
-    fh_pr.close()
-
 def train_and_test():
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
@@ -366,8 +214,8 @@ def train_and_test():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("train_path", "../../data/corpus/parsed_senseval3.eng/train/"),
-        ("test_path", "../../data/corpus/parsed_senseval3.eng/test.kepinstid/"),
+        ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train/"),
+        ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -387,11 +235,17 @@ def train_and_test():
         ("max_epochs", 100),
         ("minibatch", 10),
         ("lr", 0.1),
+        ("training_method", "fixed"),
+        ("stable_method", "zero_one_loss"),
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/brnn/trnn_nh45_lr0.1_senseval.eng")
+        ("prediction_results", "../../results/nnfl/brnn/trnn_sem0706task_preprocessed_fixed"),
+        # For SemEval-2007 task 06
+        ("out_dir", "../../results/nnfl/brnn/semeval07task06_out_preprocessd_fixed")
     ])
+
+    os.system("mkdir -p %s" % p["out_dir"])
 
     if p["random_vectors"]:
         vocab, invocab, word2vec = build_vocab(
@@ -411,7 +265,7 @@ def train_and_test():
         use_verb=p["use_verb"], lower=p["lower"], use_padding=p["use_padding"]
     )
     train, _, validation = train_loader.get_data(
-        0.9, 0.0, 0.1,
+        1.0, 0.0, 0.0,
         sent_num_threshold=0,
         frame_threshold=p["minimum_frame"], 
         verb_index=p["verb_index"]
@@ -429,6 +283,7 @@ def train_and_test():
         frame_threshold=0, 
         verb_index=p["verb_index"]
     )
+    validation = test
 
     field_names = [
         'precision', 'recall', 'f-score',
@@ -461,13 +316,21 @@ def train_and_test():
             minibatch=p["minibatch"],
             max_epochs=p["max_epochs"],
             split_pos=train[verb][2],
-            verbose=p["training_detail"]
+            verbose=p["training_detail"],
+            training_method=p["training_method"],
+            stable_method=p["stable_method"]
         )
 
         y_pred = rnn.predict(test[verb][0], split_pos=test[verb][2])
         precision, recall, f_score = bcubed_score(
             y_true=test[verb][1], y_pred=y_pred
         )
+        # Output
+        out_file = "%s/%s" % (p["out_dir"], verb)
+        out_fh = open(out_file, "w")
+        for instance_id, sense_tag in zip(test[verb][1], y_pred):
+            print("%s %s %s" % (verb, instance_id, sense_tag), file=out_fh)
+        out_fh.close()
         valid_pred = rnn.predict(validation[verb][0],
                                  split_pos=validation[verb][2])
         _, _, valid_f = bcubed_score(
@@ -510,7 +373,6 @@ def train_and_test():
     fh_pr.close()
 
 if __name__ == "__main__":
-    #  train_and_test()
+    train_and_test()
     #  train_and_save_model()
-    load_and_test()
-    #  train_and_test_sense3_eng()
+    #  load_and_test()
