@@ -51,16 +51,66 @@ def tokenize_sent_with_target(left_sent, target, right_sent, remove_punc=True):
     return [left_sent, target, right_sent]
 
 
+def convert_semeval2007_task17(detail=True):
+    """Convert English lexical sample of SemEval-2007 task 17"""
+    mode = "train"
+    data_path = "../../data/corpus/SemEval-2007-task17/%s"\
+                "/lexical-sample/english-lexical-sample.%s.xml" % (mode, mode)
+    out_dir = "../../data/corpus/parsed_semeval2007task17.eng.puncrd/%s"  % (mode,)
+    is_preprocess = True
+    remove_punc = False
+    os.system("mkdir -p %s" % out_dir)
+
+    corpus = xml.etree.ElementTree.parse(data_path).getroot()
+    for lexelt in corpus:
+        item = lexelt.attrib["item"]
+        if detail:
+            print("To process %s" % item)
+        out_fh = open("%s/%s" % (out_dir, item), "w")
+        for instance in lexelt:
+            inst_id = instance.attrib["id"]
+            if mode == "train":
+                answer = instance.find("answer")
+                senseid = answer.attrib["senseid"]
+            context = instance.find("context")
+            head = context.find("head")
+            left_sent = context.text
+            if left_sent is None:
+                left_sent = ""
+            left_sent = left_sent.strip()
+            try:
+                # No head text
+                middle = head.text.strip()
+            except:
+                continue
+            right_sent = head.tail
+            if right_sent is None:
+                right_sent = ""
+            right_sent = right_sent.strip()
+            if is_preprocess:
+                left_sent, middle, right_sent = tokenize_sent_with_target(
+                    left_sent, middle, right_sent, remove_punc
+                )
+            if mode == "train":
+                out_line = "%s\t%s\t%s\t%s" % (senseid, left_sent, middle, right_sent)
+            else:
+                out_line = "%s\t%s\t%s\t%s" % (inst_id, left_sent, middle, right_sent)
+            # Print to files
+            print(out_line, file=out_fh)
+        out_fh.close()
+
+
 def convert_semeval2007_task6(detail=True):
     """Convert SemEval-2007 task 06 to the required format"""
     # Train
     train_input_dir = "../../data/corpus/SemEval-2007-task06/train/xml/"
-    train_out_dir = "../../data/corpus/parsed_semeval2007task06.eng/train"
+    train_out_dir = "../../data/corpus/parsed_semeval2007task06.eng.prd/train"
     # Test
     test_input_dir = "../../data/corpus/SemEval-2007-task06/test/xml/"
-    test_out_dir = "../../data/corpus/parsed_semeval2007task06.eng/test"
+    test_out_dir = "../../data/corpus/parsed_semeval2007task06.eng.prd/test"
     # Whether do remove_punctuations and sent_toks
     is_preprocess = True
+    remove_punc = False
 
     os.system("rm %s -rf" % train_out_dir)
     os.system("mkdir -p %s" % train_out_dir)
@@ -102,7 +152,7 @@ def convert_semeval2007_task6(detail=True):
             right_sent = right_sent.strip()
             if is_preprocess:
                 left_sent, middle, right_sent = tokenize_sent_with_target(
-                    left_sent, middle, right_sent
+                    left_sent, middle, right_sent, remove_punc
                 )
             out_line = "%s\t%s\t%s\t%s" % (senseid, left_sent, middle, right_sent)
             print(out_line, file=out_fh)
@@ -146,7 +196,7 @@ def convert_semeval2007_task6(detail=True):
             right_sent = right_sent.strip()
             if is_preprocess:
                 left_sent, middle, right_sent = tokenize_sent_with_target(
-                    left_sent, middle, right_sent
+                    left_sent, middle, right_sent, remove_punc
                 )
             out_line = "%s\t%s\t%s\t%s" % (inst_id, left_sent, middle, right_sent)
             print(out_line, file=out_fh)
@@ -660,17 +710,18 @@ def convert_semlink_wsj2(detail=True):
     sl_wsj_labels, sentid_labelidx_map = load_semlink()
     sl_counters = summary_semlink_wsj(sl_wsj_labels, is_print=False)
 
-    show_key_words = True
+    show_key_words = False
     key_word_tag = "keywordtag"
+    remove_punc = False
 
-    out_dirs = ["../data/show_key_words_wsj_framenet/",
-                "../data/show_key_words_wsj_verbnet/",
+    out_dirs = ["../../data/corpus/wsj_framnet_prd",
+                "../data/wsj/",
                 "../data/show_key_words_wsj_sense"]
     sents_thresholds = [300, 300, 300]
     out_files = ["wsj.framenet", "wsj.verbnet", "wsj.sense"]
     frame_indexs = [4, 3, 6]
     corpus_names = ["framenet_frame", "verbnet_class", "si_grouping"]
-    excludes = [2]
+    excludes = [1, 2]
     for t in range(0, len(out_dirs)):
         if t in excludes:
             continue
@@ -784,7 +835,8 @@ def convert_semlink_wsj2(detail=True):
             right_sent = right_sent.strip()
             out_line = ("%s\t%s\t%s\t%s"
                         % (frame, left_sent, verb_bak, right_sent))
-            out_line = remove_punctuations(out_line)
+            if remove_punc:
+                out_line = remove_punctuations(out_line)
             print(out_line, file=fh)
         fh.close()
 
@@ -1166,10 +1218,11 @@ if __name__ == "__main__":
     # convert_pdev()
     # convert_chn_text()
     #  convert_propbank()
-    #  convert_semlink_wsj2()
+    convert_semlink_wsj2()
     #  merge_split_data()
     #  convert_chn_propbank()
     #  convert_fulltext_framenet()
     #  convert_senseval3_english()
-    convert_semeval2007_task6()
+    #  convert_semeval2007_task6()
     #  test_sent_tok()
+    #  convert_semeval2007_task17()

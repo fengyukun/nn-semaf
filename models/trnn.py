@@ -490,7 +490,7 @@ def brnn_gradient_test():
     x_col = 3
     no_softmax = 5
     n_h = 2
-    up_wordvec = False
+    up_wordvec = True
     use_bias = True
     act_func = 'tanh'
     use_lstm = True
@@ -525,5 +525,5 @@ def brnn_gradient_test():
 
 
 if __name__ == "__main__":
-    brnn_test()
-    #  brnn_gradient_test()
+    #  brnn_test()
+    brnn_gradient_test()

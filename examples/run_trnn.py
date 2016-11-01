@@ -48,7 +48,8 @@ def train_and_save_model():
         ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
-        ("train_path", "../../data/corpus/fulltext_framenet/"),
+        #  ("train_path", "../../data/corpus/fulltext_framenet/"),
+        ("train_path", "../../data/corpus/wsj_framnet_prd/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -77,8 +78,8 @@ def train_and_save_model():
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
-        ("result_dir", "../../results/nnfl/trained_models/fulltext_fn_721.newlr_trnn.model"),
-        ("vocab_path", "../../results/nnfl/trained_models/fulltext_fn_721.newlr_trnn.model/vocab")
+        ("result_dir", "../../results/nnfl/trained_models/trnn_fnprd.model"),
+        ("vocab_path", "../../results/nnfl/trained_models/trnn_fnprd.model/vocab")
     ])
 
     # Get the word vectors
@@ -133,12 +134,12 @@ def train_and_save_model():
 
 
 def load_and_test():
-    model_path = "../../results/nnfl/trained_models/wsj_framenet_full.newlr_trnn.model"
+    model_path = "../../results/nnfl/trained_models/wsj_framenet_full.trnn.model"
     p = OrderedDict([
         #  ("test_path", "../data/sample"),
         #  ("test_path", "../../data/corpus/semeval_mic_test_and_pdev_train/test/"),
-        ("test_path", "../../data/corpus/semeval_wing_test"),
-        #  ("test_path", "../../data/corpus/parsed_senseval3.eng/test"),
+        #  ("test_path", "../../data/corpus/semeval_wing_test"),
+        ("test_path", "../../data/corpus/fulltext_framenet/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -185,7 +186,7 @@ def load_and_test():
     for verb in verbs:
         verb_counter += 1
         y_pred = nn.predict(test[verb][0], split_pos=test[verb][2])
-        precision, recall, f_score = bcubed_score(
+        precision, recall, f_score = micro_average_score(
             y_true=test[verb][1], y_pred=y_pred
         )
 
@@ -211,15 +212,19 @@ def train_and_test():
         ("\nParameters for word vectors", ""),
         #  ("word2vec_path", "../data/sample_word2vec.txt"),
         ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt"),
+        #  ("word2vec_path", "../../data/word_vectors/GoogleNews-vectors-negative300.txt"),
+        #  ("word2vec_path", "../../data/word_vectors/glove.840B.300d.txt"),
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
         ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train/"),
         ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
+        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
+        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
-        ("lower", True),
+        ("lower", True), # ATTENTION
         ("use_padding", False),
         ("verb_index", True),
         # Minimum number of sentences of training data
@@ -227,22 +232,22 @@ def train_and_test():
         # Minimum frame of verb of training data
         ("minimum_frame", 0), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
-        ("n_h", 45), # ATTENTION TO THIS
-        ("up_wordvec", False),
+        ("n_h", 55), # ATTENTION TO THIS
+        ("up_wordvec", True), # ATTENTION TO THIS
         ("use_bias", True),
         ("act_func", "tanh"),
         ("use_lstm", True),
         ("max_epochs", 100),
         ("minibatch", 10),
         ("lr", 0.1),
-        ("training_method", "fixed"),
+        ("training_method", "dynamic"),
         ("stable_method", "zero_one_loss"),
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/brnn/trnn_sem0706task_preprocessed_fixed"),
+        ("prediction_results", "../../results/nnfl/brnn/text_trash"),
         # For SemEval-2007 task 06
-        ("out_dir", "../../results/nnfl/brnn/semeval07task06_out_preprocessd_fixed")
+        ("out_dir", "../../results/nnfl/brnn/semeval07task6_nh55.upwordvec_common")
     ])
 
     os.system("mkdir -p %s" % p["out_dir"])
