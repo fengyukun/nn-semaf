@@ -49,7 +49,8 @@ def train_and_save_model():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("train_path", "../../data/corpus/fulltext_framenet/"),
-        ("train_path", "../../data/corpus/wsj_framnet_prd/"),
+        #  ("train_path", "../../data/corpus/wsj_framnet_prd/"),
+        ("train_path", "../../data/corpus/das_2014_fulltextfn/train_new"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -66,21 +67,26 @@ def train_and_save_model():
         ("minimum_frame", 2), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
         ("n_h", 100), # ATTENTION TO THIS
-        ("up_wordvec", False),
+        ("up_wordvec", True),
         ("use_bias", True),
         ("act_func", "tanh"),
         ("use_lstm", True),
         ("max_epochs", 100),
         ("minibatch", 50), # ATTENTION TO THIS
         ("lr", 0.1),
-        ("training_method", "dynamic"),
+        ("training_method", "fixed"),
         ("stable_method", "zero_one_loss"),
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
-        ("result_dir", "../../results/nnfl/trained_models/trnn_fnprd.model"),
-        ("vocab_path", "../../results/nnfl/trained_models/trnn_fnprd.model/vocab")
+        # Save the model
+        ("freq", 4),
+        ("result_dir", "../../results/nnfl/trained_models/das_2014_fulltext_trainnew.model"),
+        ("vocab_path", "../../results/nnfl/trained_models/das_2014_fulltext_trainnew.model/vocab")
     ])
+
+    # Write the vocab to file
+    write_vocab_to_file(p["vocab_path"], vocab, oov_tag=p["oov"])
 
     # Get the word vectors
     if p["random_vectors"]:
@@ -124,14 +130,11 @@ def train_and_save_model():
         split_pos=train[train_file][2],
         verbose=p["training_detail"],
         training_method=p["training_method"],
-        stable_method=p["stable_method"]
+        stable_method=p["stable_method"],
+        is_write_to_file=True,
+        target_dir=p["result_dir"],
+        freq=p["freq"]
     )
-
-    # Write the model to file
-    nn.write_to_files(p["result_dir"])
-    # Write the vocab to file
-    write_vocab_to_file(p["vocab_path"], vocab, oov_tag=p["oov"])
-
 
 def load_and_test():
     model_path = "../../results/nnfl/trained_models/wsj_framenet_full.trnn.model"
@@ -217,10 +220,10 @@ def train_and_test():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
-        ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train/"),
-        ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
+        #  ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train/"),
+        #  ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
+        ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
+        ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -247,7 +250,7 @@ def train_and_test():
         ("training_detail", False), # ATTENTION TO THIS
         ("prediction_results", "../../results/nnfl/brnn/text_trash"),
         # For SemEval-2007 task 06
-        ("out_dir", "../../results/nnfl/brnn/semeval07task6_nh55.upwordvec_common")
+        ("out_dir", "../../results/nnfl/brnn/semeval07task17_nh55.upwordvec")
     ])
 
     os.system("mkdir -p %s" % p["out_dir"])
@@ -378,6 +381,6 @@ def train_and_test():
     fh_pr.close()
 
 if __name__ == "__main__":
-    train_and_test()
-    #  train_and_save_model()
+    #  train_and_test()
+    train_and_save_model()
     #  load_and_test()

@@ -65,14 +65,14 @@ def train_and_save_model():
         ("minimum_frame", 0), # ATTENTION TO THIS
         ("\nParameters for rnn model", ""),
         ("n_h", 100), # ATTENTION TO THIS
-        ("up_wordvec", False),
+        ("up_wordvec", True),
         ("use_bias", True),
         ("act_func", "tanh"),
         ("use_lstm", True),
         ("max_epochs", 100),
         ("minibatch", 50), # ATTENTION TO THIS
         ("lr", 0.1),
-        ("training_method", "dynamic"),
+        ("training_method", "fixed"),
         ("stable_method", "zero_one_loss"),
         ("norm_func",'softmax'),
         ("show_key_words", False), # ATTENTION TO THIS
@@ -80,9 +80,14 @@ def train_and_save_model():
         ("random_vectors", False), # ATTENTION TO THIS
         ("\nOther parameters", ""),
         ("training_detail", True), # ATTENTION TO THIS
-        ("result_dir", "../../results/nnfl/trained_models/wsjfn.abirnn.fixed.model"),
-        ("vocab_path", "../../results/nnfl/trained_models/wsjfn.abirnn.fixed.model/vocab")
+        # Save the model
+        ("freq", 4),
+        ("result_dir", "../../results/nnfl/trained_models/wsjfn.abirnn.fixed.upvec.model"),
+        ("vocab_path", "../../results/nnfl/trained_models/wsjfn.abirnn.fixed.upvec.model/vocab")
     ])
+
+    # Write the vocab to file
+    write_vocab_to_file(p["vocab_path"], vocab, oov_tag=p["oov"])
 
     # Get the word vectors
     if p["random_vectors"]:
@@ -128,13 +133,12 @@ def train_and_save_model():
         split_pos=train[train_file][2],
         verbose=p["training_detail"],
         training_method=p["training_method"],
-        stable_method=p["stable_method"]
+        stable_method=p["stable_method"],
+        is_write_to_file=True,
+        target_dir=p["result_dir"],
+        freq=p["freq"]
     )
 
-    # Write the model to file
-    nn.write_to_files(p["result_dir"])
-    # Write the vocab to file
-    write_vocab_to_file(p["vocab_path"], vocab, oov_tag=p["oov"])
 
 def load_and_test():
     model_path = "../../results/nnfl/trained_models/wsjfn_721.abirnn.model"
@@ -224,17 +228,12 @@ def load_and_test():
           "infomation over %d verbs are:" % len(verbs))
     print(gen_print_info(field_names, scores_overall / len(verbs)))
 
-def train_and_test_in_pipeline():
-    word2vec_path = "../../data/word_vectors/glove.6B.300d.txt" 
-    oov = "O_O_V"
-    # Get vocabulary and word vectors
-    vocab, invocab, word2vec = load_word_vectors(
-        word2vec_path, add_oov=True,oov=oov
-    )
 
+def train_and_test():
     p = OrderedDict([
         ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
+        ("word2vec_path", "../data/sample_word2vec.txt"),
+        ("word2vec_path", "../../data/word_vectors/glove.6B.300d.txt" )
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         #  ("data_path", "../data/sample"),
@@ -277,357 +276,14 @@ def train_and_test_in_pipeline():
         # For SemEval-2007 task 06
         ("out_dir", "../../results/nnfl/abinn/semeval07task06_45")
     ])
-    # 06task
-    train_and_test(p, vocab, invocab, word2vec)
-
-    p = OrderedDict([
-        ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("oov", "O_O_V"),
-        ("\nParameters for loading data", ""),
-        #  ("data_path", "../data/sample"),
-        #  ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train"),
-        #  ("test_path", "../../data/corpus/semeval_mic_test_and_p_pdev_train/train"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/test"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
-        ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train"),
-        ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
-        ("left_win", -1),
-        ("right_win", -1),
-        ("use_verb", True),
-        ("lower", True),
-        ("use_padding", False),
-        ("verb_index", True),
-        # Minimum number of sentences of training data
-        ("minimum_sent_num", 0), # ATTENTION TO THIS
-        # Minimum frame of verb of training data
-        ("minimum_frame", 0), # ATTENTION TO THIS
-        ("\nParameters for rnn model", ""),
-        ("n_h", 65), # ATTENTION TO THIS
-        ("up_wordvec", False),
-        ("use_bias", True),
-        ("act_func", "tanh"),
-        ("use_lstm", True),
-        ("max_epochs", 100),
-        ("minibatch", 10),
-        ("lr", 0.1),
-        ("training_method", "dynamic"),
-        ("stable_method", "zero_one_loss"),
-        ("norm_func",'softmax'),
-        ("random_vectors", False), # ATTENTION TO THIS
-        ("show_key_words",False), # ATTENTION TO THIS
-        ("key_words_tag", "keywordtag"),
-        ("\nOther parameters", ""),
-        ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/abinn/null"),
-        # For SemEval-2007 task 06
-        ("out_dir", "../../results/nnfl/abinn/semeval07task06_65")
-    ])
-    # 06task
-    train_and_test(p, vocab, invocab, word2vec)
-
-    p = OrderedDict([
-        ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("oov", "O_O_V"),
-        ("\nParameters for loading data", ""),
-        #  ("data_path", "../data/sample"),
-        #  ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train"),
-        #  ("test_path", "../../data/corpus/semeval_mic_test_and_p_pdev_train/train"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/test"),
-        ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
-        ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
-        ("left_win", -1),
-        ("right_win", -1),
-        ("use_verb", True),
-        ("lower", True),
-        ("use_padding", False),
-        ("verb_index", True),
-        # Minimum number of sentences of training data
-        ("minimum_sent_num", 0), # ATTENTION TO THIS
-        # Minimum frame of verb of training data
-        ("minimum_frame", 0), # ATTENTION TO THIS
-        ("\nParameters for rnn model", ""),
-        ("n_h", 55), # ATTENTION TO THIS
-        ("up_wordvec", False),
-        ("use_bias", True),
-        ("act_func", "tanh"),
-        ("use_lstm", True),
-        ("max_epochs", 100),
-        ("minibatch", 10),
-        ("lr", 0.1),
-        ("training_method", "dynamic"),
-        ("stable_method", "zero_one_loss"),
-        ("norm_func",'softmax'),
-        ("random_vectors", False), # ATTENTION TO THIS
-        ("show_key_words",False), # ATTENTION TO THIS
-        ("key_words_tag", "keywordtag"),
-        ("\nOther parameters", ""),
-        ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/abinn/null"),
-        # For SemEval-2007 task 06
-        ("out_dir", "../../results/nnfl/abinn/semeval07task17_55")
-    ])
-    # 06task
-    train_and_test(p, vocab, invocab, word2vec)
-
-    p = OrderedDict([
-        ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("oov", "O_O_V"),
-        ("\nParameters for loading data", ""),
-        #  ("data_path", "../data/sample"),
-        #  ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train"),
-        #  ("test_path", "../../data/corpus/semeval_mic_test_and_p_pdev_train/train"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/test"),
-        ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
-        ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
-        ("left_win", -1),
-        ("right_win", -1),
-        ("use_verb", True),
-        ("lower", True),
-        ("use_padding", False),
-        ("verb_index", True),
-        # Minimum number of sentences of training data
-        ("minimum_sent_num", 0), # ATTENTION TO THIS
-        # Minimum frame of verb of training data
-        ("minimum_frame", 0), # ATTENTION TO THIS
-        ("\nParameters for rnn model", ""),
-        ("n_h", 65), # ATTENTION TO THIS
-        ("up_wordvec", False),
-        ("use_bias", True),
-        ("act_func", "tanh"),
-        ("use_lstm", True),
-        ("max_epochs", 100),
-        ("minibatch", 10),
-        ("lr", 0.1),
-        ("training_method", "dynamic"),
-        ("stable_method", "zero_one_loss"),
-        ("norm_func",'softmax'),
-        ("random_vectors", False), # ATTENTION TO THIS
-        ("show_key_words",False), # ATTENTION TO THIS
-        ("key_words_tag", "keywordtag"),
-        ("\nOther parameters", ""),
-        ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/abinn/null"),
-        # For SemEval-2007 task 06
-        ("out_dir", "../../results/nnfl/abinn/semeval07task17_65")
-    ])
-    # 06task
-    train_and_test(p, vocab, invocab, word2vec)
-
-    p = OrderedDict([
-        ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("oov", "O_O_V"),
-        ("\nParameters for loading data", ""),
-        #  ("data_path", "../data/sample"),
-        #  ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train"),
-        #  ("test_path", "../../data/corpus/semeval_mic_test_and_p_pdev_train/train"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/test"),
-        ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
-        ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
-        ("left_win", -1),
-        ("right_win", -1),
-        ("use_verb", True),
-        ("lower", True),
-        ("use_padding", False),
-        ("verb_index", True),
-        # Minimum number of sentences of training data
-        ("minimum_sent_num", 0), # ATTENTION TO THIS
-        # Minimum frame of verb of training data
-        ("minimum_frame", 0), # ATTENTION TO THIS
-        ("\nParameters for rnn model", ""),
-        ("n_h", 75), # ATTENTION TO THIS
-        ("up_wordvec", False),
-        ("use_bias", True),
-        ("act_func", "tanh"),
-        ("use_lstm", True),
-        ("max_epochs", 100),
-        ("minibatch", 10),
-        ("lr", 0.1),
-        ("training_method", "dynamic"),
-        ("stable_method", "zero_one_loss"),
-        ("norm_func",'softmax'),
-        ("random_vectors", False), # ATTENTION TO THIS
-        ("show_key_words",False), # ATTENTION TO THIS
-        ("key_words_tag", "keywordtag"),
-        ("\nOther parameters", ""),
-        ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/abinn/null"),
-        # For SemEval-2007 task 06
-        ("out_dir", "../../results/nnfl/abinn/semeval07task17_75")
-    ])
-    # 06task
-    train_and_test(p, vocab, invocab, word2vec)
-
-    p = OrderedDict([
-        ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("oov", "O_O_V"),
-        ("\nParameters for loading data", ""),
-        #  ("data_path", "../data/sample"),
-        #  ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train"),
-        #  ("test_path", "../../data/corpus/semeval_mic_test_and_p_pdev_train/train"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/test"),
-        ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
-        ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
-        ("left_win", -1),
-        ("right_win", -1),
-        ("use_verb", True),
-        ("lower", True),
-        ("use_padding", False),
-        ("verb_index", True),
-        # Minimum number of sentences of training data
-        ("minimum_sent_num", 0), # ATTENTION TO THIS
-        # Minimum frame of verb of training data
-        ("minimum_frame", 0), # ATTENTION TO THIS
-        ("\nParameters for rnn model", ""),
-        ("n_h", 45), # ATTENTION TO THIS
-        ("up_wordvec", False),
-        ("use_bias", True),
-        ("act_func", "tanh"),
-        ("use_lstm", True),
-        ("max_epochs", 100),
-        ("minibatch", 10),
-        ("lr", 0.1),
-        ("training_method", "dynamic"),
-        ("stable_method", "zero_one_loss"),
-        ("norm_func",'softmax'),
-        ("random_vectors", False), # ATTENTION TO THIS
-        ("show_key_words",False), # ATTENTION TO THIS
-        ("key_words_tag", "keywordtag"),
-        ("\nOther parameters", ""),
-        ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/abinn/null"),
-        # For SemEval-2007 task 06
-        ("out_dir", "../../results/nnfl/abinn/semeval07task17_45")
-    ])
-    # 06task
-    train_and_test(p, vocab, invocab, word2vec)
-
-    p = OrderedDict([
-        ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("oov", "O_O_V"),
-        ("\nParameters for loading data", ""),
-        #  ("data_path", "../data/sample"),
-        #  ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train"),
-        #  ("test_path", "../../data/corpus/semeval_mic_test_and_p_pdev_train/train"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/test"),
-        ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
-        ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
-        ("left_win", -1),
-        ("right_win", -1),
-        ("use_verb", True),
-        ("lower", True),
-        ("use_padding", False),
-        ("verb_index", True),
-        # Minimum number of sentences of training data
-        ("minimum_sent_num", 0), # ATTENTION TO THIS
-        # Minimum frame of verb of training data
-        ("minimum_frame", 0), # ATTENTION TO THIS
-        ("\nParameters for rnn model", ""),
-        ("n_h", 35), # ATTENTION TO THIS
-        ("up_wordvec", False),
-        ("use_bias", True),
-        ("act_func", "tanh"),
-        ("use_lstm", True),
-        ("max_epochs", 100),
-        ("minibatch", 10),
-        ("lr", 0.1),
-        ("training_method", "dynamic"),
-        ("stable_method", "zero_one_loss"),
-        ("norm_func",'softmax'),
-        ("random_vectors", False), # ATTENTION TO THIS
-        ("show_key_words",False), # ATTENTION TO THIS
-        ("key_words_tag", "keywordtag"),
-        ("\nOther parameters", ""),
-        ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/abinn/null"),
-        # For SemEval-2007 task 06
-        ("out_dir", "../../results/nnfl/abinn/semeval07task17_35")
-    ])
-    # 06task
-    train_and_test(p, vocab, invocab, word2vec)
-
-def train_and_test_in_pipeline2():
-    word2vec_path = "../../data/word_vectors/glove.6B.300d.txt" 
-    oov = "O_O_V"
-    # Get vocabulary and word vectors
-    vocab, invocab, word2vec = load_word_vectors(
-        word2vec_path, add_oov=True,oov=oov
-    )
-
-    p = OrderedDict([
-        ("\nParameters for word vectors", ""),
-        #  ("word2vec_path", "../data/sample_word2vec.txt"),
-        ("oov", "O_O_V"),
-        ("\nParameters for loading data", ""),
-        #  ("data_path", "../data/sample"),
-        #  ("train_path", "../../data/corpus/semeval_mic_test_and_pdev_train/train"),
-        #  ("test_path", "../../data/corpus/semeval_mic_test_and_p_pdev_train/train"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng.puncrd/test"),
-        #  ("train_path", "../../data/corpus/parsed_semeval2007task17.eng/train"),
-        #  ("test_path", "../../data/corpus/parsed_semeval2007task17.eng/test"),
-        ("train_path", "../../data/corpus/parsed_semeval2007task06.eng/train"),
-        ("test_path", "../../data/corpus/parsed_semeval2007task06.eng/test"),
-        ("left_win", -1),
-        ("right_win", -1),
-        ("use_verb", True),
-        ("lower", True),
-        ("use_padding", False),
-        ("verb_index", True),
-        # Minimum number of sentences of training data
-        ("minimum_sent_num", 0), # ATTENTION TO THIS
-        # Minimum frame of verb of training data
-        ("minimum_frame", 0), # ATTENTION TO THIS
-        ("\nParameters for rnn model", ""),
-        ("n_h", 55), # ATTENTION TO THIS
-        ("up_wordvec", False),
-        ("use_bias", True),
-        ("act_func", "tanh"),
-        ("use_lstm", True),
-        ("max_epochs", 100),
-        ("minibatch", 10),
-        ("lr", 0.1),
-        ("training_method", "fixed"),
-        ("stable_method", "zero_one_loss"),
-        ("norm_func",'softmax'),
-        ("random_vectors", False), # ATTENTION TO THIS
-        ("show_key_words",False), # ATTENTION TO THIS
-        ("key_words_tag", "keywordtag"),
-        ("\nOther parameters", ""),
-        ("training_detail", False), # ATTENTION TO THIS
-        ("prediction_results", "../../results/nnfl/abinn/null"),
-        # For SemEval-2007 task 06
-        ("out_dir", "../../results/nnfl/abinn/semeval07task06_55_fixed")
-    ])
-    # 06task
-    train_and_test(p, vocab, invocab, word2vec)
-
-
-def train_and_test(p, vocab, invocab, word2vec):
     # Get train data
     os.system("mkdir -p %s" % p["out_dir"])
+
+    # Get vocabulary and word vectors
+    vocab, invocab, word2vec = load_word_vectors(
+        word2vec_path, add_oov=True,oov=p["oov"]
+    )
+
     train_loader = DataLoader(
         data_path=p["train_path"], vocab=vocab, oov=p["oov"],
         left_win=p["left_win"], right_win=p["right_win"],
@@ -767,8 +423,6 @@ def train_and_test(p, vocab, invocab, word2vec):
     fh_pr.close()
 
 if __name__ == "__main__":
-    #  train_and_save_model()
+    train_and_save_model()
     #  load_and_test()
     #  train_and_test()
-    #  train_and_test_in_pipeline()
-    train_and_test_in_pipeline2()

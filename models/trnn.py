@@ -308,7 +308,8 @@ class TRNN(object):
 
     def minibatch_train(self, lr=0.1, minibatch=5, max_epochs=100,
                         split_pos=None, verbose=False,
-                        training_method='dynamic', stable_method='zero_one_loss'):
+                        training_method='dynamic', stable_method='zero_one_loss',
+                        is_write_to_file=False, target_dir=None, freq=None):
         """
         Minibatch training over x. Training will be stopped when the zero-one
         loss is zero on x.
@@ -334,6 +335,9 @@ class TRNN(object):
             'zero_one_loss': The training considers to be stable when zero one loss is zero.
             'cost_stable': The training considers to be stable when the cost is continuously
             stable. The 'fixed' and 'cost_table' combination are not supported.
+        is_write_to_file:, bool, whether write models to file in a real time. 
+        target_dir: model is saved in target_dir if is_write_to_file is True
+        freq: int, save the model every freq epoch
         Return
         ----
         train_epoch: int
@@ -382,6 +386,11 @@ class TRNN(object):
                              "cross-entropy:%f, zero-one loss: %f"
                              % (epoch, cost, error))
 
+            if is_write_to_file and epoch % freq == 0:
+                if verbose:
+                    logging.info("write models to %s" % target_dir)
+                self.write_to_files(target_dir)
+
             if training_method == 'dynamic':
                 # The first epoch
                 if last_cost is None:
@@ -429,6 +438,10 @@ class TRNN(object):
                 if abs(error - 0.0) <= 0.0001:
                     break
 
+        if is_write_to_file:
+            if verbose:
+                logging.info("Finally, write models to %s" % target_dir)
+            self.write_to_files(target_dir)
         return epoch
 
     def predict(self, x, split_pos=None):
@@ -478,12 +491,12 @@ def brnn_test():
     minibatch = 5
     max_epochs = 100
     verbose = True
-    training_method = 'dynamic'
-    #  training_method = 'fixed'
-    #  stable_method = 'zero_one_loss'
-    stable_method = 'cost_stable'
+    #  training_method = 'dynamic'
+    training_method = 'fixed'
+    stable_method = 'zero_one_loss'
+    #  stable_method = 'cost_stable'
     nntest.minibatch_train(lr, minibatch, max_epochs, split_pos, verbose, training_method,
-                           stable_method)
+                           stable_method, is_write_to_file=True, target_dir="target_dir", freq=10)
 
 
 def brnn_gradient_test():
@@ -525,5 +538,5 @@ def brnn_gradient_test():
 
 
 if __name__ == "__main__":
-    #  brnn_test()
-    brnn_gradient_test()
+    brnn_test()
+    #  brnn_gradient_test()

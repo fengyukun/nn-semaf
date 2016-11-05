@@ -288,6 +288,88 @@ def convert_senseval3_english():
         out_fh.close()
 
 
+def split_fulltext_framenet(detail=True):
+    """Split the fulltext of framenet to the meet in Das et al. (2014, §3.2)."""
+    # The name of test document
+    test_doc = [
+        "ANC__110CYL067.xml",
+        "ANC__110CYL069.xml",
+        "ANC__112C-L013.xml",
+        "ANC__IntroHongKong.xml",
+        "ANC__StephanopoulosCrimes.xml",
+        "ANC__WhereToHongKong.xml",
+        "KBEval__atm.xml",
+        "KBEval__Brandeis.xml",
+        "KBEval__cycorp.xml",
+        "KBEval__parc.xml",
+        "KBEval__Stanford.xml",
+        "KBEval__utd-icsi.xml",
+        "LUCorpus-v0.3__20000410_nyt-NEW.xml",
+        "LUCorpus-v0.3__AFGP-2002-602187-Trans.xml",
+        "LUCorpus-v0.3__enron-thread-159550.xml",
+        "LUCorpus-v0.3__IZ-060316-01-Trans-1.xml",
+        "LUCorpus-v0.3__SNO-525.xml",
+        "LUCorpus-v0.3__sw2025-ms98-a-trans.ascii-1-NEW.xml",
+        "Miscellaneous__Hound-Ch14.xml",
+        "Miscellaneous__SadatAssassination.xml",
+        "NTI__NorthKorea_Introduction.xml",
+        "NTI__Syria_NuclearOverview.xml",
+        "PropBank__AetnaLifeAndCasualty.xml"
+    ]
+
+    # Do not forget to remove the repeated sentences
+    output_file = "fulltext_framenet.train"
+    out_fh = open(output_file, "w")
+    docs = fn.documents()
+    docs_len = len(docs)
+    for i in range(0, docs_len):
+        doc = docs[i]
+        doc_id = doc['ID']
+        doc_name = doc['filename']
+        if doc_name in test_doc:
+            continue
+        # Annotated docs
+        adoc = fn.annotated_document(doc_id)
+        # Sentences
+        sents = adoc['sentence']
+        if detail:
+            print("To process %s (%s/%s)" % (doc_name, i + 1, docs_len))
+        for sent in sents:
+            text = sent['text']
+            # annotation set
+            annotation_set = sent['annotationSet']
+            for annotation in annotation_set:
+                #  if annotation['status'] != 'MANUAL' or 'frameName' not in annotation:
+                    #  continue
+
+                if 'frameName' not in annotation or 'layer' not in annotation:
+                    continue
+                frame_name = annotation['frameName']
+                # Get layer
+                layers = annotation['layer']
+                for layer in layers:
+                    layer_rank = layer['rank']
+                    layer_name = layer['name']
+                    labels = layer['label']
+                    for label in labels:
+                        label_name = label['name']
+                        if layer_name == 'Target' and label_name == 'Target':
+                            label_start = label['start']
+                            label_end = label['end']
+                            target = text[label_start:label_end + 1].strip()
+                            left_sent = text[0:label_start]
+                            left_sent = remove_punctuations(left_sent)
+                            right_sent = text[label_end + 1:]
+                            right_sent = remove_punctuations(right_sent)
+                            out_line =  "%s\t%s\t%s\t%s" % (frame_name, left_sent, target, right_sent)
+                            try:
+                                print(out_line, file=out_fh)
+                            except:
+                                print("Exception happens at print. Skip it")
+                                continue
+    out_fh.close() 
+
+
 def convert_fulltext_framenet(detail=True):
     """Convert the fulltext of framenet to the required input format."""
     # Do not forget to remove the repeated sentences
@@ -1218,7 +1300,7 @@ if __name__ == "__main__":
     # convert_pdev()
     # convert_chn_text()
     #  convert_propbank()
-    convert_semlink_wsj2()
+    #  convert_semlink_wsj2()
     #  merge_split_data()
     #  convert_chn_propbank()
     #  convert_fulltext_framenet()
@@ -1226,3 +1308,4 @@ if __name__ == "__main__":
     #  convert_semeval2007_task6()
     #  test_sent_tok()
     #  convert_semeval2007_task17()
+    split_fulltext_framenet()
