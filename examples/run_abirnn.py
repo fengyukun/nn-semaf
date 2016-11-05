@@ -48,7 +48,6 @@ def train_and_save_model():
         ("oov", "O_O_V"),
         ("\nParameters for loading data", ""),
         ("train_path", "../../data/corpus/wsj_framnet/"),
-        #  ("train_path", "../../data/corpus/wsj_framnet_prd/"),
         ("left_win", -1),
         ("right_win", -1),
         ("use_verb", True),
@@ -86,8 +85,7 @@ def train_and_save_model():
         ("vocab_path", "../../results/nnfl/trained_models/wsjfn.abirnn.fixed.upvec.model/vocab")
     ])
 
-    # Write the vocab to file
-    write_vocab_to_file(p["vocab_path"], vocab, oov_tag=p["oov"])
+    os.system("mkdir -p %s" % (p["result_dir"],))
 
     # Get the word vectors
     if p["random_vectors"]:
@@ -100,6 +98,9 @@ def train_and_save_model():
         vocab, invocab, word2vec = load_word_vectors(
             p["word2vec_path"], add_oov=True, oov=p["oov"]
         )
+
+    # Write the vocab to file
+    write_vocab_to_file(p["vocab_path"], vocab, oov_tag=p["oov"])
 
     # Get train data
     train_loader = DataLoader(
