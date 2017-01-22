@@ -20,6 +20,7 @@ from __future__ import division
 import os
 import nltk
 import numpy as np
+import random
 from random import shuffle
 from tools import*
 

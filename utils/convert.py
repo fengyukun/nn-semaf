@@ -22,6 +22,7 @@ import xml.etree.ElementTree
 import codecs
 import string
 from tools import*
+from data_loader import*
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -49,6 +50,71 @@ def tokenize_sent_with_target(left_sent, target, right_sent, remove_punc=True):
         left_sent = remove_punctuations(left_sent)
         right_sent = remove_punctuations(right_sent)
     return [left_sent, target, right_sent]
+
+
+def split_dataset(detail=True):
+    """Split dataset into training, test and valid. set"""
+    p = {
+        "oov": "O_O_V",
+        "left_win": -1,
+        "right_win": -1,
+        "use_verb": True,
+        "lower": False,
+        "use_padding": False,
+        "verb_index": True,
+        "minimum_frame": 2, 
+        "sent_num_threshold": 100,
+        "data_path": "../../data/corpus/pdev/",
+        "out_dir": "../../data/corpus/pdev_new_split"
+    }
+
+    os.system("mkdir -p %s" % p["out_dir"])
+    sub_dirs = ["train", "test", "valid"]
+    for sub_dir in sub_dirs:
+        os.system("mkdir -p %s/%s" % (p["out_dir"], sub_dir))
+
+    vocab, index2word_vocab = build_vocab(
+        corpus_dir=p["data_path"], oov=p["oov"]
+    )
+
+    data_loader = DataLoader(
+        data_path=p["data_path"],
+        vocab=vocab,
+        oov=p["oov"],
+        left_win=p["left_win"],
+        right_win=p["right_win"],
+        use_verb=p["use_verb"],
+        lower=p["lower"],
+        use_padding=p["use_padding"] 
+    )
+    datasets = data_loader.get_data(
+        0.7, 0.2, 0.1,
+        frame_threshold=p["minimum_frame"], 
+        sent_num_threshold=p["sent_num_threshold"],
+        verb_index=p["verb_index"]
+    )
+    for i in range(0, len(datasets)):
+        dataset = datasets[i]
+        sub_dir = sub_dirs[i]
+        if detail:
+            print("To process %s" % sub_dir)
+        dataset_out_dir = "%s/%s" % (p["out_dir"], sub_dir)
+        for verb in dataset.keys():
+            if detail:
+                print("To process %s" % verb)
+            out_file_path = "%s/%s" % (dataset_out_dir, verb)
+            fh_out = open(out_file_path, "w")
+            sents = indexs2sents(dataset[verb][0], index2word_vocab)
+            for j in range(0, len(sents)):
+                label = dataset[verb][1][j]
+                verb_index = dataset[verb][2][j]
+                sent = sents[j]
+                left_sent = " ".join(sent[0:verb_index])
+                target = sent[verb_index]
+                right_sent = " ".join(sent[verb_index + 1:])
+                out_line = "%s\t%s\t%s\t%s" % (label, left_sent, target, right_sent)
+                fh_out.write(out_line + "\n")
+            fh_out.close()
 
 
 def convert_semeval2007_task17(detail=True):
@@ -1308,4 +1374,5 @@ if __name__ == "__main__":
     #  convert_semeval2007_task6()
     #  test_sent_tok()
     #  convert_semeval2007_task17()
-    split_fulltext_framenet()
+    #  split_fulltext_framenet()
+    split_dataset()
